@@ -1,3 +1,5 @@
+"use client";
+
 const Pagination = ({
   currentPage,
   totalItem,
@@ -15,10 +17,11 @@ const Pagination = ({
   for (let i = 1; i <= totalPage; i++) {
     pageNumbers.push(i);
   }
+
   return (
     <div className="flex justify-center items-center mt-8 mb-4 gap-6 text-white">
       <button
-        className="bg-[#A141FE] text-white px-2 py-1"
+        className="bg-[#A141FE] text-white px-2 py-1 disabled:opacity-50 disabled:cursor-not-allowed"
         disabled={currentPage === 1}
         onClick={() => onPageChange(currentPage - 1)}
       >
@@ -38,7 +41,7 @@ const Pagination = ({
       ))}
 
       <button
-        className="bg-[#A141FE] px-2 py-1 text-white"
+        className="bg-[#A141FE] px-2 py-1 text-white disabled:opacity-50 disabled:cursor-not-allowed"
         disabled={currentPage === totalPage}
         onClick={() => onPageChange(currentPage + 1)}
       >

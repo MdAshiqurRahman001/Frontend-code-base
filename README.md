@@ -25,6 +25,8 @@ src/
 │   ├── form/                     ← Form wrappers (react-hook-form)
 │   └── ui/                       ← shadcn/ui primitives
 ├── hooks/                        ← Custom React hooks
+│   ├── redux.ts                  ← Typed useAppSelector & useAppDispatch hooks
+│   └── use-mobile.ts             ← useIsMobile() hook
 ├── redux/                        ← All Redux/RTK Query logic
 │   ├── Provider.tsx              ← Redux + PersistGate wrapper
 │   ├── store.ts                  ← Configured Redux store
@@ -33,11 +35,11 @@ src/
 │   └── features/
 │       ├── rootReducer.ts        ← Combined reducer
 │       └── auth/
-│           └── authSlice.ts      ← Auth state slice
+│           └── authSlice.ts      ← Auth state slice (User, AuthState types)
 ├── fonts/                        ← Custom font definitions
 ├── lib/
 │   └── utils.ts                  ← cn() helper (clsx + tailwind-merge)
-└── proxy.ts                      ← Next.js middleware (auth guard)
+└── middleware.ts                  ← Next.js middleware (auth guard)
 ```
 
 ---
@@ -128,17 +130,17 @@ This is the **most critical** Next.js concept to understand.
 - Pages/layouts that display server-fetched data → **Server Component** (no `"use client"`)
 - Components that use Redux selectors, `useState`, event handlers → **Client Component** (add `"use client"` at the top)
 
-`AppSidebar.tsx` correctly uses `"use client"` because it calls `useSelector` and `usePathname`:
+`AppSidebar.tsx` correctly uses `"use client"` because it calls `useAppSelector` and `usePathname`:
 
 ```tsx
 "use client";  // ← Required because we use hooks below
 
-import { useSelector } from "react-redux";
+import { useAppSelector } from "@/hooks/redux";
 import { usePathname } from "next/navigation";
 
 export function AppSidebar() {
-  const pathname = usePathname();        // ← Hook: needs "use client"
-  const currentUser = useSelector(...); // ← Redux hook: needs "use client"
+  const pathname = usePathname();           // ← Hook: needs "use client"
+  const currentUser = useAppSelector(...); // ← Typed Redux hook: needs "use client"
 }
 ```
 
@@ -184,13 +186,13 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
 
 ---
 
-### Concept 5: Middleware (`proxy.ts` → rename to `middleware.ts`)
+### Concept 5: Middleware — `src/middleware.ts`
 
-> ⚠️ **Important Bug:** The file is named `proxy.ts` but Next.js requires it to be named **`middleware.ts`** in the `src/` directory. Rename it so Next.js actually runs it.
+The middleware runs **before every request**. It is already correctly set up at `src/middleware.ts`.
 
-The middleware runs **before every request** and is perfect for auth guards.
+> ⚠️ **Note:** Next.js requires this file to be named exactly **`middleware.ts`** inside `src/`. Any other name (e.g. `proxy.ts`) is silently ignored.
 
-Current `src/proxy.ts` (rename to `src/middleware.ts`):
+Current state — allows all requests through (development mode):
 
 ```ts
 export default function middleware(request: NextRequest) {
@@ -198,11 +200,12 @@ export default function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next|api).*)"], // Runs on all pages except Next.js internals
+  // Runs on all routes except Next.js internals and static files
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api).*)"],
 };
 ```
 
-**After building auth**, change it to:
+**When you are ready to add auth protection**, replace the body with:
 
 ```ts
 export default function middleware(request: NextRequest) {
@@ -285,14 +288,27 @@ A **slice** is a self-contained piece of Redux state with:
 - Selectors (functions to read state)
 
 ```ts
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+
+// Type definitions for the auth state
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  role?: string;
+}
+
+export interface AuthState {
+  user: User | null;
+  token: string | null;
+}
+
 const authSlice = createSlice({
   name: "auth",           // ← Namespace: actions become "auth/setUser", "auth/logout"
-  initialState: {
-    user: null,           // ← Stored user object
-    token: null,          // ← JWT token
-  },
+  initialState: { user: null, token: null } as AuthState,
   reducers: {
-    setUser: (state, action) => {
+    setUser: (state, action: PayloadAction<{ user: User; token: string }>) => {
       state.user = action.payload.user;
       state.token = action.payload.token;
       // Redux Toolkit uses Immer — you CAN mutate state directly here
@@ -305,20 +321,20 @@ const authSlice = createSlice({
 });
 
 // Selectors — reusable functions to read state
-export const selectCurrentUser = (state: RootState) => state.auth.user;
-export const selectCurrentToken = (state: RootState) => state.auth.token;
+export const selectCurrentUser = (state: RootState): User | null => state.auth.user;
+export const selectCurrentToken = (state: RootState): string | null => state.auth.token;
 ```
 
 **How to use in a component:**
 
 ```tsx
 "use client";
-import { useSelector, useDispatch } from "react-redux";
+import { useAppSelector, useAppDispatch } from "@/hooks/redux";
 import { selectCurrentUser, logout } from "@/redux/features/auth/authSlice";
 
 export function UserProfile() {
-  const user = useSelector(selectCurrentUser); // ← READ from store
-  const dispatch = useDispatch();              // ← WRITE to store
+  const user = useAppSelector(selectCurrentUser); // ← READ — fully typed, no cast needed
+  const dispatch = useAppDispatch();              // ← WRITE — type-safe dispatch
 
   const handleLogout = () => {
     dispatch(logout()); // ← Triggers the logout reducer
@@ -356,7 +372,7 @@ export const baseApi = createApi({
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as RootState)?.auth?.token;
       if (token) {
-        headers.set("Authorization", `${token}`); // ← Auto-attach JWT
+        headers.set("Authorization", `Bearer ${token}`); // ← Auto-attach JWT
       }
       return headers;
     },
@@ -521,14 +537,15 @@ That's all — now `state.products` exists in your store.
 |---|---|
 | Add a new **page** | Create `src/app/.../page.tsx` |
 | Add a new **layout** | Create `src/app/.../layout.tsx` |
-| Add **auth protection** | Rename `proxy.ts` → `middleware.ts`, add token check |
+| Add **auth protection** | Edit `src/middleware.ts` — uncomment the token check logic |
 | Add a new **API endpoint** | Create `src/redux/features/[feature]/[feature]Api.ts` |
 | Add new **client state** | Create `src/redux/features/[feature]/[feature]Slice.ts`, register in `rootReducer.ts` |
 | Persist new state in localStorage | Add key to `whitelist` in `store.ts` persistConfig |
 | Change **API base URL** | `.env` file (`NEXT_PUBLIC_BASE_URL` / `NEXT_PUBLIC_DEV_BASE_URL`) |
-| Add a new **font** | `src/fonts/Fonts.ts` + `layout.tsx` body className |
+| Add a new **font** | `src/fonts/Fonts.tsx` + `layout.tsx` body className |
 | Add a new **sidebar link** | `src/components/dashboardLayout/AppSidebar.tsx` |
 | Change **global styles** | `src/app/globals.css` |
+| Show a **confirm/delete dialog** | `import showDeleteModal from "@/components/common/DeleteModal"` |
 
 ---
 
@@ -602,7 +619,7 @@ export default function UsersPage() {
 
 ### Pattern 1: Custom Typed Hooks
 
-Create `src/hooks/redux.ts` to avoid writing `as RootState` everywhere:
+This file already exists at `src/hooks/redux.ts`:
 
 ```ts
 import { TypedUseSelectorHook, useDispatch, useSelector } from "react-redux";
@@ -667,7 +684,7 @@ deleteUser: builder.mutation({
 | Not adding `tagTypes` to `baseApi.ts` | Add all tags to the `tagTypes: []` array |
 | Mutating state outside of a slice reducer | Only mutate state inside `createSlice` reducers |
 | Using `fetch()` directly when RTK Query is available | Use RTK Query endpoints for all API calls |
-| Naming middleware file `proxy.ts` | Must be `src/middleware.ts` for Next.js to recognize it |
+| Using plain `useDispatch`/`useSelector` | Use `useAppDispatch`/`useAppSelector` from `@/hooks/redux` for full type safety |
 
 ---
 

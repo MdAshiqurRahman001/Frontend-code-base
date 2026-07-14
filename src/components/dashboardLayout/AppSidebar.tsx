@@ -17,7 +17,7 @@ import type * as React from "react";
 import { selectCurrentUser } from "@/redux/features/auth/authSlice";
 import { Sidebar, SidebarContent, SidebarRail } from "@/components/ui/sidebar";
 import { usePathname } from "next/navigation";
-import { useSelector } from "react-redux";
+import { useAppSelector } from "@/hooks/redux";
 import { TeamSwitcher } from "./TeamSwitch";
 import { NavMain } from "./NavMain";
 
@@ -112,11 +112,7 @@ const adminUserData = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
-  const currentUser = useSelector(selectCurrentUser) as {
-    name?: string;
-    email?: string;
-    avatar?: string;
-  } | null;
+  const currentUser = useAppSelector(selectCurrentUser);
   const isAdminPath = pathname.startsWith("/dashboard/admin");
   const basePath = isAdminPath ? "/dashboard/admin" : "/dashboard";
   const navigationData = isAdminPath ? adminUserData : defaultUserData;

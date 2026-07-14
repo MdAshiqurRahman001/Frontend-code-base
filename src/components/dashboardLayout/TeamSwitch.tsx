@@ -10,7 +10,7 @@ import Cookies from "js-cookie";
 import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
-import { useDispatch } from "react-redux";
+import { useAppDispatch } from "@/hooks/redux";
 import { toast } from "sonner";
 import Swal from "sweetalert2";
 
@@ -27,7 +27,7 @@ export function TeamSwitcher({
   };
 }) {
   const [activeTeam] = React.useState(teams[0]);
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const router = useRouter();
   const displayName = user?.name ?? "Default User";
   const displayEmail = user?.email ?? "user@guicopay.gn";
