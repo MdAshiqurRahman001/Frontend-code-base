@@ -1,0 +1,714 @@
+# 📚 Complete Next.js + Redux Guide
+
+> This guide is written specifically around this project. Every example uses the **actual files** in this repo.
+
+---
+
+## 🗂️ Project Structure At a Glance
+
+```
+src/
+├── app/                          ← Next.js App Router (pages & layouts)
+│   ├── layout.tsx                ← Root layout (wraps EVERYTHING)
+│   ├── globals.css               ← Global styles (Tailwind v4)
+│   ├── (authLayout)/             ← Route group for auth pages
+│   │   └── auth/
+│   │       ├── layout.tsx        ← Shared auth layout
+│   │       ├── signin/page.tsx   ← /auth/signin
+│   │       └── signup/page.tsx   ← /auth/signup
+│   └── (dashboardLayout)/        ← Route group for dashboard
+│       └── dashboard/
+│           ├── layout.tsx        ← Dashboard shell (sidebar + header)
+│           └── page.tsx          ← /dashboard
+├── components/                   ← Reusable UI components
+│   ├── dashboardLayout/          ← Sidebar, Header, Nav components
+│   ├── form/                     ← Form wrappers (react-hook-form)
+│   └── ui/                       ← shadcn/ui primitives
+├── hooks/                        ← Custom React hooks
+├── redux/                        ← All Redux/RTK Query logic
+│   ├── Provider.tsx              ← Redux + PersistGate wrapper
+│   ├── store.ts                  ← Configured Redux store
+│   ├── api/
+│   │   └── baseApi.ts            ← RTK Query base API instance
+│   └── features/
+│       ├── rootReducer.ts        ← Combined reducer
+│       └── auth/
+│           └── authSlice.ts      ← Auth state slice
+├── fonts/                        ← Custom font definitions
+├── lib/
+│   └── utils.ts                  ← cn() helper (clsx + tailwind-merge)
+└── proxy.ts                      ← Next.js middleware (auth guard)
+```
+
+---
+
+## 🧠 PART 1 — NEXT.JS (App Router)
+
+### Concept 1: The App Router & File-Based Routing
+
+Next.js uses your **folder structure** to define URLs automatically. Any folder inside `src/app/` with a `page.tsx` becomes a route.
+
+| File | URL in Browser |
+|---|---|
+| `src/app/(authLayout)/auth/signin/page.tsx` | `/auth/signin` |
+| `src/app/(authLayout)/auth/signup/page.tsx` | `/auth/signup` |
+| `src/app/(dashboardLayout)/dashboard/page.tsx` | `/dashboard` |
+
+> **Key insight:** Folders wrapped in `(parentheses)` are called **Route Groups** — they organize your code without affecting the URL. This project uses `(authLayout)` and `(dashboardLayout)` as route groups.
+
+---
+
+### Concept 2: Layouts — Shared UI Wrapping Pages
+
+A `layout.tsx` file **wraps** all pages inside its folder and sub-folders. It stays mounted while its child pages change — this is what makes navigation feel instant.
+
+**Layout Hierarchy:**
+
+```
+layout.tsx (Root)
+  └── (authLayout)/auth/layout.tsx          ← Wraps signin & signup
+  └── (dashboardLayout)/dashboard/layout.tsx ← Wraps dashboard pages (sidebar + header)
+```
+
+**Root Layout** — `src/app/layout.tsx`:
+
+```tsx
+// Wraps EVERY page on the entire site
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en">
+      <body className={`${openSans.variable} ... antialiased`}>
+        <Suspense fallback={<Loading />}>
+          <ReduxProvider>        {/* ← Redux store available everywhere */}
+            {children}           {/* ← Your actual page renders here */}
+            <Toaster ... />
+          </ReduxProvider>
+        </Suspense>
+      </body>
+    </html>
+  );
+}
+```
+
+**Dashboard Layout** — `src/app/(dashboardLayout)/dashboard/layout.tsx`:
+
+```tsx
+// Wraps only dashboard pages — sidebar + header always visible
+const DashboardLayout = ({ children }) => {
+  return (
+    <div className="h-screen flex overflow-hidden">
+      <SidebarProvider>
+        <AppSidebar />          {/* ← Always rendered on dashboard pages */}
+        <SidebarInset>
+          <AppHeader />
+          <div>{children}</div> {/* ← dashboard/page.tsx renders here */}
+        </SidebarInset>
+      </SidebarProvider>
+    </div>
+  );
+};
+```
+
+> **When to add a new layout:** When you want a group of pages to share the same chrome (sidebar, header, nav). For example, adding an `/dashboard/admin/...` section.
+
+---
+
+### Concept 3: Server vs Client Components
+
+This is the **most critical** Next.js concept to understand.
+
+| | Server Component (default) | Client Component (`"use client"`) |
+|---|---|---|
+| **Runs on** | Server only | Browser |
+| **Can use** | `async/await`, server data | `useState`, `useEffect`, hooks |
+| **Cannot use** | `useState`, `useEffect`, browser APIs | Server-side caching |
+| **Examples in this repo** | `layout.tsx`, `page.tsx` files | `AppSidebar.tsx`, `Provider.tsx` |
+
+**Rule of thumb for this project:**
+- Pages/layouts that display server-fetched data → **Server Component** (no `"use client"`)
+- Components that use Redux selectors, `useState`, event handlers → **Client Component** (add `"use client"` at the top)
+
+`AppSidebar.tsx` correctly uses `"use client"` because it calls `useSelector` and `usePathname`:
+
+```tsx
+"use client";  // ← Required because we use hooks below
+
+import { useSelector } from "react-redux";
+import { usePathname } from "next/navigation";
+
+export function AppSidebar() {
+  const pathname = usePathname();        // ← Hook: needs "use client"
+  const currentUser = useSelector(...); // ← Redux hook: needs "use client"
+}
+```
+
+---
+
+### Concept 4: Adding New Pages (Step by Step)
+
+**Scenario: Add a `/dashboard/users` page**
+
+1. Create the folder: `src/app/(dashboardLayout)/dashboard/users/`
+2. Create `page.tsx` inside it:
+
+```tsx
+// src/app/(dashboardLayout)/dashboard/users/page.tsx
+import React from 'react'
+
+export default function UsersPage() {
+  return (
+    <div>
+      <h1>Users</h1>
+    </div>
+  )
+}
+```
+
+3. It is immediately accessible at `/dashboard/users` — **no router config needed**.
+
+**Scenario: Add a nested dynamic route `/dashboard/users/[id]`**
+
+```
+src/app/(dashboardLayout)/dashboard/users/
+├── page.tsx          ← /dashboard/users
+└── [id]/
+    └── page.tsx      ← /dashboard/users/123
+```
+
+```tsx
+// src/app/(dashboardLayout)/dashboard/users/[id]/page.tsx
+export default function UserDetailPage({ params }: { params: { id: string } }) {
+  return <div>User ID: {params.id}</div>
+}
+```
+
+---
+
+### Concept 5: Middleware (`proxy.ts` → rename to `middleware.ts`)
+
+> ⚠️ **Important Bug:** The file is named `proxy.ts` but Next.js requires it to be named **`middleware.ts`** in the `src/` directory. Rename it so Next.js actually runs it.
+
+The middleware runs **before every request** and is perfect for auth guards.
+
+Current `src/proxy.ts` (rename to `src/middleware.ts`):
+
+```ts
+export default function middleware(request: NextRequest) {
+  return NextResponse.next(); // Currently: allows everything through
+}
+
+export const config = {
+  matcher: ["/((?!_next|api).*)"], // Runs on all pages except Next.js internals
+};
+```
+
+**After building auth**, change it to:
+
+```ts
+export default function middleware(request: NextRequest) {
+  const token = request.cookies.get("token")?.value;
+  const isAuthPage = request.nextUrl.pathname.startsWith("/auth");
+
+  if (!token && !isAuthPage) {
+    return NextResponse.redirect(new URL("/auth/signin", request.url));
+  }
+  return NextResponse.next();
+}
+```
+
+---
+
+## 🔴 PART 2 — REDUX TOOLKIT (RTK + RTK Query)
+
+### Concept 6: Redux Architecture
+
+The Redux setup has **two layers**:
+
+```
+redux/
+├── store.ts              ← The single source of truth
+├── Provider.tsx          ← Makes the store available to all components
+├── api/
+│   └── baseApi.ts        ← RTK Query: handles ALL API calls
+└── features/
+    ├── rootReducer.ts    ← Combines all feature reducers
+    └── auth/
+        └── authSlice.ts  ← Manages: { user, token }
+```
+
+**Data flow:**
+
+```
+User Action → dispatch(action) → Slice Reducer → Store updates → Component re-renders
+API Call   → RTK Query endpoint → Auto-managed loading/error/data states
+```
+
+---
+
+### Concept 7: The Store — `src/redux/store.ts`
+
+```ts
+export const store = configureStore({
+  reducer: persistedReducer,  // ← All state lives here
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      serializableCheck: {
+        ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
+        // ↑ Ignored because redux-persist uses non-serializable data internally
+      },
+    }).concat(baseApi.middleware), // ← RTK Query needs its own middleware
+});
+
+// These two types are critical — always use them instead of plain Redux types
+export type RootState = ReturnType<typeof rootReducer>;  // ← Shape of entire state
+export type AppDispatch = typeof store.dispatch;          // ← Type-safe dispatch
+```
+
+**Redux Persist:** The store saves the `auth` slice to `localStorage` automatically. When the user refreshes, their login stays intact.
+
+```ts
+const persistConfig = {
+  key: "root",
+  storage,            // ← localStorage
+  whitelist: ["auth"], // ← ONLY persist auth state. API cache is NOT persisted.
+};
+```
+
+---
+
+### Concept 8: Auth Slice — `src/redux/features/auth/authSlice.ts`
+
+A **slice** is a self-contained piece of Redux state with:
+- Initial state
+- Reducers (functions that update state)
+- Actions (auto-generated from reducers)
+- Selectors (functions to read state)
+
+```ts
+const authSlice = createSlice({
+  name: "auth",           // ← Namespace: actions become "auth/setUser", "auth/logout"
+  initialState: {
+    user: null,           // ← Stored user object
+    token: null,          // ← JWT token
+  },
+  reducers: {
+    setUser: (state, action) => {
+      state.user = action.payload.user;
+      state.token = action.payload.token;
+      // Redux Toolkit uses Immer — you CAN mutate state directly here
+    },
+    logout: (state) => {
+      state.user = null;
+      state.token = null;
+    },
+  },
+});
+
+// Selectors — reusable functions to read state
+export const selectCurrentUser = (state: RootState) => state.auth.user;
+export const selectCurrentToken = (state: RootState) => state.auth.token;
+```
+
+**How to use in a component:**
+
+```tsx
+"use client";
+import { useSelector, useDispatch } from "react-redux";
+import { selectCurrentUser, logout } from "@/redux/features/auth/authSlice";
+
+export function UserProfile() {
+  const user = useSelector(selectCurrentUser); // ← READ from store
+  const dispatch = useDispatch();              // ← WRITE to store
+
+  const handleLogout = () => {
+    dispatch(logout()); // ← Triggers the logout reducer
+  };
+
+  return (
+    <div>
+      <p>{user?.name}</p>
+      <button onClick={handleLogout}>Logout</button>
+    </div>
+  );
+}
+```
+
+---
+
+### Concept 9: RTK Query — `src/redux/api/baseApi.ts`
+
+RTK Query **replaces `useEffect` + `fetch`** for API calls. It auto-manages:
+
+- ✅ Loading state
+- ✅ Error state
+- ✅ Data caching
+- ✅ Automatic re-fetching
+- ✅ Cache invalidation
+
+The base API is the **foundation** — all feature APIs extend from it:
+
+```ts
+export const baseApi = createApi({
+  reducerPath: "baseApi",         // ← Where RTK Query stores its cache in Redux
+  baseQuery: fetchBaseQuery({
+    baseUrl,                      // ← Your API server URL (from .env)
+    credentials: "include",       // ← Send cookies with every request
+    prepareHeaders: (headers, { getState }) => {
+      const token = (getState() as RootState)?.auth?.token;
+      if (token) {
+        headers.set("Authorization", `${token}`); // ← Auto-attach JWT
+      }
+      return headers;
+    },
+  }),
+  endpoints: () => ({}),          // ← Empty here; filled by injectEndpoints() in feature files
+  tagTypes: [],                   // ← For cache invalidation (add tags as you build)
+});
+```
+
+---
+
+### Concept 10: Adding a New API Feature (Step by Step)
+
+**Scenario: Add auth API endpoints (login, register)**
+
+**Step 1:** Create `src/redux/features/auth/authApi.ts`
+
+```ts
+import baseApi from "@/redux/api/baseApi";
+import { setUser } from "./authSlice";
+
+const authApi = baseApi.injectEndpoints({
+  endpoints: (builder) => ({
+
+    // Mutation = POST/PUT/DELETE (changes data on the server)
+    login: builder.mutation({
+      query: (credentials: { email: string; password: string }) => ({
+        url: "/auth/login",
+        method: "POST",
+        body: credentials,
+      }),
+      async onQueryStarted(_args, { dispatch, queryFulfilled }) {
+        const { data } = await queryFulfilled;
+        dispatch(setUser({ user: data.user, token: data.token }));
+        // ↑ Automatically updates Redux store on successful login
+      },
+    }),
+
+    // Query = GET (fetches data from the server)
+    getProfile: builder.query({
+      query: () => "/auth/profile",
+      providesTags: ["User"],
+    }),
+
+    logout: builder.mutation({
+      query: () => ({ url: "/auth/logout", method: "POST" }),
+    }),
+
+  }),
+});
+
+// Auto-generated hooks — use these in your components
+export const { useLoginMutation, useGetProfileQuery, useLogoutMutation } = authApi;
+```
+
+**Step 2:** Add `"User"` to `tagTypes` in `baseApi.ts`:
+
+```ts
+tagTypes: ["User"], // ← Add tags here as you build features
+```
+
+**Step 3:** Use the hook in the signin page:
+
+```tsx
+// src/app/(authLayout)/auth/signin/page.tsx
+"use client";
+import { useLoginMutation } from "@/redux/features/auth/authApi";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+
+export default function SigninPage() {
+  const [login, { isLoading }] = useLoginMutation();
+  const router = useRouter();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+
+    try {
+      await login({
+        email: formData.get("email") as string,
+        password: formData.get("password") as string,
+      }).unwrap(); // .unwrap() throws on error so try/catch works
+
+      toast.success("Login successful!");
+      router.push("/dashboard");
+    } catch (error) {
+      toast.error("Login failed. Check credentials.");
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input name="email" type="email" />
+      <input name="password" type="password" />
+      <button type="submit" disabled={isLoading}>
+        {isLoading ? "Signing in..." : "Sign In"}
+      </button>
+    </form>
+  );
+}
+```
+
+---
+
+### Concept 11: Adding a New Feature Slice (e.g., Products)
+
+When you need **client-side state** (not just API data), create a new slice.
+
+**Step 1:** Create `src/redux/features/products/productsSlice.ts`
+
+```ts
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+
+const productsSlice = createSlice({
+  name: "products",
+  initialState: {
+    selectedProduct: null,
+    filters: { category: "", price: "" },
+  },
+  reducers: {
+    selectProduct: (state, action: PayloadAction<any>) => {
+      state.selectedProduct = action.payload;
+    },
+    setFilter: (state, action: PayloadAction<{ key: string; value: string }>) => {
+      state.filters[action.payload.key] = action.payload.value;
+    },
+    clearFilters: (state) => {
+      state.filters = { category: "", price: "" };
+    },
+  },
+});
+
+export const { selectProduct, setFilter, clearFilters } = productsSlice.actions;
+export default productsSlice.reducer;
+```
+
+**Step 2:** Register it in `src/redux/features/rootReducer.ts`:
+
+```ts
+import { combineReducers } from "@reduxjs/toolkit";
+import baseApi from "../api/baseApi";
+import authReducer from "./auth/authSlice";
+import productsReducer from "./products/productsSlice"; // ← Add import
+
+const rootReducer = combineReducers({
+  [baseApi.reducerPath]: baseApi.reducer,
+  auth: authReducer,
+  products: productsReducer, // ← Register it here
+});
+
+export default rootReducer;
+```
+
+That's all — now `state.products` exists in your store.
+
+---
+
+## 🗺️ PART 3 — WHERE TO CHANGE WHAT (Quick Reference)
+
+| Task | File(s) to Change |
+|---|---|
+| Add a new **page** | Create `src/app/.../page.tsx` |
+| Add a new **layout** | Create `src/app/.../layout.tsx` |
+| Add **auth protection** | Rename `proxy.ts` → `middleware.ts`, add token check |
+| Add a new **API endpoint** | Create `src/redux/features/[feature]/[feature]Api.ts` |
+| Add new **client state** | Create `src/redux/features/[feature]/[feature]Slice.ts`, register in `rootReducer.ts` |
+| Persist new state in localStorage | Add key to `whitelist` in `store.ts` persistConfig |
+| Change **API base URL** | `.env` file (`NEXT_PUBLIC_BASE_URL` / `NEXT_PUBLIC_DEV_BASE_URL`) |
+| Add a new **font** | `src/fonts/Fonts.ts` + `layout.tsx` body className |
+| Add a new **sidebar link** | `src/components/dashboardLayout/AppSidebar.tsx` |
+| Change **global styles** | `src/app/globals.css` |
+
+---
+
+## 📋 PART 4 — BUILDING A FEATURE END-TO-END
+
+### Example: Add a "Users" section to the Admin Dashboard
+
+**Step 1: Create the RTK Query API**
+
+```
+src/redux/features/users/
+├── usersApi.ts     ← GET /users, GET /users/:id, DELETE /users/:id
+└── usersSlice.ts   ← Optional: client state like selectedUser
+```
+
+**Step 2: Create the Pages**
+
+```
+src/app/(dashboardLayout)/dashboard/admin/users/
+├── page.tsx           ← /dashboard/admin/users  (list)
+└── [id]/
+    └── page.tsx       ← /dashboard/admin/users/123  (detail)
+```
+
+**Step 3: Create the Components**
+
+```
+src/components/users/
+├── UserTable.tsx
+├── UserCard.tsx
+└── UserDeleteButton.tsx
+```
+
+**Step 4: Add to the Sidebar**
+
+In `AppSidebar.tsx`, `adminUserData.main` already includes `/users`:
+
+```ts
+{
+  title: "Customers",
+  path: "/users",     // → /dashboard/admin/users
+  icon: Users,
+},
+```
+
+**Step 5: Connect everything in the page**
+
+```tsx
+// src/app/(dashboardLayout)/dashboard/admin/users/page.tsx
+"use client"; // ← Needed because we use RTK Query hooks
+import { useGetUsersQuery } from "@/redux/features/users/usersApi";
+
+export default function UsersPage() {
+  const { data: users, isLoading, isError } = useGetUsersQuery(undefined);
+
+  if (isLoading) return <div>Loading...</div>;
+  if (isError) return <div>Error loading users</div>;
+
+  return (
+    <div>
+      <h1>Users</h1>
+      {users?.map(user => <div key={user.id}>{user.name}</div>)}
+    </div>
+  );
+}
+```
+
+---
+
+## ⚡ Key Patterns to Remember
+
+### Pattern 1: Custom Typed Hooks
+
+Create `src/hooks/redux.ts` to avoid writing `as RootState` everywhere:
+
+```ts
+import { TypedUseSelectorHook, useDispatch, useSelector } from "react-redux";
+import type { RootState, AppDispatch } from "@/redux/store";
+
+export const useAppDispatch = () => useDispatch<AppDispatch>();
+export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
+```
+
+Usage:
+
+```tsx
+const user = useAppSelector(selectCurrentUser); // ← Fully typed, no "as" needed
+const dispatch = useAppDispatch();
+```
+
+### Pattern 2: Cache Invalidation with Tags
+
+```ts
+// In usersApi.ts
+getUsers: builder.query({
+  query: () => "/users",
+  providesTags: ["User"],         // ← This query provides "User" data
+}),
+deleteUser: builder.mutation({
+  query: (id) => ({ url: `/users/${id}`, method: "DELETE" }),
+  invalidatesTags: ["User"],      // ← After delete, auto-refetch getUsers
+}),
+```
+
+### Pattern 3: Optimistic Updates
+
+```ts
+deleteUser: builder.mutation({
+  query: (id) => ({ url: `/users/${id}`, method: "DELETE" }),
+  async onQueryStarted(id, { dispatch, queryFulfilled }) {
+    // Immediately update the UI before the server responds
+    const patchResult = dispatch(
+      usersApi.util.updateQueryData("getUsers", undefined, (draft) => {
+        return draft.filter(user => user.id !== id);
+      })
+    );
+    try {
+      await queryFulfilled;
+    } catch {
+      patchResult.undo(); // Revert if server request fails
+    }
+  },
+}),
+```
+
+---
+
+## 🔥 Common Mistakes to Avoid
+
+| Mistake | Fix |
+|---|---|
+| Using `useState`/hooks in a Server Component | Add `"use client"` at the top |
+| Forgetting `"use client"` on components that use Redux | Add `"use client"` |
+| Calling hooks conditionally | Always call hooks at the top level, unconditionally |
+| Not registering new slices in `rootReducer.ts` | Always add to `combineReducers({})` |
+| Not adding `tagTypes` to `baseApi.ts` | Add all tags to the `tagTypes: []` array |
+| Mutating state outside of a slice reducer | Only mutate state inside `createSlice` reducers |
+| Using `fetch()` directly when RTK Query is available | Use RTK Query endpoints for all API calls |
+| Naming middleware file `proxy.ts` | Must be `src/middleware.ts` for Next.js to recognize it |
+
+---
+
+## 🚀 Getting Started
+
+```powershell
+# Install dependencies
+npm install
+
+# Run dev server
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+### Scripts
+
+| Command | Description |
+|---|---|
+| `npm run dev` | Start development server |
+| `npm run build` | Build for production |
+| `npm run start` | Run production build |
+| `npm run lint` | Run ESLint |
+
+### Environment Variables
+
+Copy `.env` and fill in your values:
+
+```text
+NEXT_PUBLIC_ENV=development
+NEXT_PUBLIC_PORT=5000
+NEXT_PUBLIC_BASE_URL=https://api.yourproductiondomain.com/api
+NEXT_PUBLIC_DEV_BASE_URL=http://localhost:5000/api
+```
+
+---
+
+## Author
+
+**Md. Rakibul Islam** — Junior Frontend Developer
+
+## License
+
+MIT — see `LICENSE` for details.
