@@ -1,25 +1,25 @@
 import React, { Suspense } from "react";
 import type { Metadata } from "next";
-import SignInForm from "@/components/auth/SignInForm";
+import OtpInput from "@/components/auth/OtpInput";
 
 export const metadata: Metadata = {
-  title: "Sign In | App",
-  description: "Sign in to your account to access your dashboard.",
+  title: "Verify OTP | App",
+  description: "Enter the OTP sent to your email to verify your account.",
 };
 
-export default function SigninPage() {
+export default function VerifyOtpPage() {
   return (
     <div>
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-1">
-          Sign in to your account
+          Verify your email
         </h2>
         <p className="text-gray-500 text-sm">
-          Welcome back! Please enter your details.
+          Enter the one-time code we sent to your email address.
         </p>
       </div>
       <Suspense>
-        <SignInForm />
+        <OtpInput />
       </Suspense>
     </div>
   );

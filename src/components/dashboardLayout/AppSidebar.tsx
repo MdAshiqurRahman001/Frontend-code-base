@@ -1,16 +1,14 @@
 "use client";
 
 import {
+  Bell,
   CircleUser,
-  Codesandbox,
+  CreditCard,
+  HeadphonesIcon,
   LayoutGrid,
   MessageCircleMore,
-  MonitorCog,
-  ReceiptText,
-  ShieldAlert,
-  UserCog,
+  ShieldCheck,
   Users,
-  Wallet,
 } from "lucide-react";
 import type * as React from "react";
 
@@ -21,94 +19,38 @@ import { useAppSelector } from "@/hooks/redux";
 import { TeamSwitcher } from "./TeamSwitch";
 import { NavMain } from "./NavMain";
 
+// ─── User Navigation ───────────────────────────────────────────────────────────
+
 const defaultUserData = {
   main: [
-    {
-      title: "Dashboard",
-      path: "",
-      icon: LayoutGrid,
-    },
-    {
-      title: "Messages",
-      path: "/messages",
-      icon: MessageCircleMore,
-    },
-    {
-      title: "Payments & Payouts",
-      path: "/challenges",
-      icon: Wallet,
-    },
-    {
-      title: "Profile",
-      path: "/profile",
-      icon: CircleUser,
-    },
+    { title: "Dashboard", path: "", icon: LayoutGrid },
+    { title: "Messages", path: "/messages", icon: MessageCircleMore },
+    { title: "Subscriptions", path: "/subscriptions", icon: CreditCard },
+    { title: "Notifications", path: "/notifications", icon: Bell },
+    { title: "Profile", path: "/profile", icon: CircleUser },
   ],
   other: [
-    {
-      title: "Support",
-      path: "/support",
-      icon: MessageCircleMore,
-    },
+    { title: "Support", path: "/support", icon: HeadphonesIcon },
   ],
 };
 
+// ─── Admin Navigation ─────────────────────────────────────────────────────────
+
 const adminUserData = {
   main: [
-    {
-      title: "Dashboard",
-      path: "",
-      icon: LayoutGrid,
-    },
-    {
-      title: "Customers",
-      path: "/users",
-      icon: Users,
-    },
-    {
-      title: "Merchants",
-      path: "/category",
-      icon: Codesandbox,
-    },
-    {
-      title: "Invoices",
-      path: "/invoices",
-      icon: ReceiptText,
-    },
-    {
-      title: "Payments & Payouts",
-      path: "/challenges",
-      icon: Wallet,
-    },
-    {
-      title: "Messages",
-      path: "/messages",
-      icon: MessageCircleMore,
-    },
+    { title: "Dashboard", path: "", icon: LayoutGrid },
+    { title: "Users", path: "/users", icon: Users },
+    { title: "Subscriptions", path: "/subscriptions", icon: CreditCard },
+    { title: "Notifications", path: "/notifications", icon: Bell },
+    { title: "Messages", path: "/messages", icon: MessageCircleMore },
   ],
   other: [
-    {
-      title: "Risk Monitoring",
-      path: "/risk-monitoring",
-      icon: ShieldAlert,
-    },
-    {
-      title: "System Configuration",
-      path: "/system-configuration",
-      icon: MonitorCog,
-    },
-    {
-      title: "Profile",
-      path: "/profile",
-      icon: CircleUser,
-    },
-    {
-      title: "Access Management",
-      path: "/access-management",
-      icon: UserCog,
-    },
+    { title: "Security", path: "", icon: ShieldCheck },
+    { title: "Profile", path: "/profile", icon: CircleUser },
   ],
 };
+
+// ─── Sidebar Component ────────────────────────────────────────────────────────
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
@@ -122,25 +64,27 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar
       collapsible="offcanvas"
-      className="[--sidebar-primary:#10A34B] [--sidebar-primary-foreground:#FFFFFF]"
+      className="[--sidebar-primary:#6366f1] [--sidebar-primary-foreground:#FFFFFF]"
       {...props}
     >
       <SidebarContent className="px-3 pt-2">
         <TeamSwitcher
           teams={[
-            { name: isAdminPath ? "Admin" : "Default", logo: () => null },
+            { name: isAdminPath ? "Admin Panel" : "My Dashboard", logo: () => null },
           ]}
           user={{
             name:
-              currentUser?.name ??
-              (isAdminPath ? "Admin User" : "Default User"),
+              currentUser?.fullName ??
+              currentUser?.email ??
+              (isAdminPath ? "Admin User" : "User"),
             email:
               currentUser?.email ??
-              (isAdminPath ? "admin@guicopay.gn" : "user@guicopay.gn"),
-            avatar: currentUser?.avatar,
-            roleLabel: isAdminPath ? "Admin" : "User",
+              (isAdminPath ? "admin@app.com" : "user@app.com"),
+            avatar: currentUser?.profileImage ?? undefined,
+            roleLabel: currentUser?.role ?? (isAdminPath ? "ADMIN" : "USER"),
           }}
         />
+
         <NavMain
           title={isAdminPath ? "Admin" : "Main"}
           items={navigationData.main.map((item) => ({
@@ -149,11 +93,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             icon: item.icon,
           }))}
         />
+
         <NavMain
           title={isAdminPath ? "Management" : "Other"}
           items={navigationData.other.map((item) => ({
             title: item.title,
-            url: buildUrl(item.path),
+            url: item.path ? buildUrl(item.path) : basePath,
             icon: item.icon,
           }))}
         />

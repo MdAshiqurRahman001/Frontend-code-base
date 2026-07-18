@@ -4,6 +4,18 @@
 
 ---
 
+## 🛠️ Tech Stack
+
+- **Framework**: Next.js 16 (App Router) + React 19
+- **State Management**: Redux Toolkit + RTK Query + Redux Persist
+- **Styling**: Tailwind CSS v4 + Radix UI + class-variance-authority
+- **Real-Time**: Native WebSockets (`useWebSocket` hook)
+- **Forms**: React Hook Form
+- **Animations**: Framer Motion (`motion`) + Lottie (`@lottiefiles/dotlottie-react`)
+- **Icons & UI**: Lucide React, Swiper, SweetAlert2, Sonner
+
+---
+
 ## 🗂️ Project Structure At a Glance
 
 ```
@@ -23,6 +35,7 @@ src/
 ├── components/                   ← Reusable UI components
 │   ├── dashboardLayout/          ← Sidebar, Header, Nav components
 │   ├── form/                     ← Form wrappers (react-hook-form)
+│   ├── providers/                ← React context providers (e.g., WebSocketProvider)
 │   └── ui/                       ← shadcn/ui primitives
 ├── hooks/                        ← Custom React hooks
 │   ├── redux.ts                  ← Typed useAppSelector & useAppDispatch hooks
@@ -39,7 +52,8 @@ src/
 ├── fonts/                        ← Custom font definitions
 ├── lib/
 │   └── utils.ts                  ← cn() helper (clsx + tailwind-merge)
-└── middleware.ts                  ← Next.js middleware (auth guard)
+├── types/                        ← TypeScript interfaces (AppNotification, Chat, etc.)
+└── middleware.ts                 ← Next.js middleware (auth guard)
 ```
 
 ---
@@ -386,76 +400,73 @@ export const baseApi = createApi({
 
 ### Concept 10: Adding a New API Feature (Step by Step)
 
-**Scenario: Add auth API endpoints (login, register)**
+**Scenario: Add auth API endpoints (login, logout, profile)**
 
-**Step 1:** Create `src/redux/features/auth/authApi.ts`
+**Step 1:** Create `src/redux/api/authApi.ts`
 
 ```ts
 import baseApi from "@/redux/api/baseApi";
-import { setUser } from "./authSlice";
+import { ApiResponse, LoginResponse, User } from "@/types";
 
-const authApi = baseApi.injectEndpoints({
+export const authApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-
     // Mutation = POST/PUT/DELETE (changes data on the server)
-    login: builder.mutation({
-      query: (credentials: { email: string; password: string }) => ({
+    loginUser: builder.mutation<ApiResponse<LoginResponse>, { email: string; password: string }>({
+      query: (credentials) => ({
         url: "/auth/login",
         method: "POST",
         body: credentials,
       }),
-      async onQueryStarted(_args, { dispatch, queryFulfilled }) {
-        const { data } = await queryFulfilled;
-        dispatch(setUser({ user: data.user, token: data.token }));
-        // ↑ Automatically updates Redux store on successful login
-      },
+      invalidatesTags: ["Auth"],
     }),
 
     // Query = GET (fetches data from the server)
-    getProfile: builder.query({
+    getMyProfile: builder.query<ApiResponse<User>, void>({
       query: () => "/auth/profile",
-      providesTags: ["User"],
+      providesTags: ["Auth"],
     }),
 
-    logout: builder.mutation({
+    logoutUser: builder.mutation<ApiResponse<null>, void>({
       query: () => ({ url: "/auth/logout", method: "POST" }),
+      invalidatesTags: ["Auth", "User"],
     }),
-
   }),
+  overrideExisting: false,
 });
 
 // Auto-generated hooks — use these in your components
-export const { useLoginMutation, useGetProfileQuery, useLogoutMutation } = authApi;
+export const { useLoginUserMutation, useGetMyProfileQuery, useLogoutUserMutation } = authApi;
 ```
 
-**Step 2:** Add `"User"` to `tagTypes` in `baseApi.ts`:
+**Step 2:** Add `"Auth"` to `tagTypes` in `baseApi.ts` (if it isn't there already).
 
-```ts
-tagTypes: ["User"], // ← Add tags here as you build features
-```
-
-**Step 3:** Use the hook in the signin page:
+**Step 3:** Use the hook in your component (e.g., `src/components/auth/SignInForm.tsx`):
 
 ```tsx
-// src/app/(authLayout)/auth/signin/page.tsx
 "use client";
-import { useLoginMutation } from "@/redux/features/auth/authApi";
+import { useLoginUserMutation } from "@/redux/api/authApi";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { useAppDispatch } from "@/hooks/redux";
+import { setUser } from "@/redux/features/auth/authSlice";
 
-export default function SigninPage() {
-  const [login, { isLoading }] = useLoginMutation();
+export default function SignInForm() {
+  const [loginUser, { isLoading }] = useLoginUserMutation();
+  const dispatch = useAppDispatch();
   const router = useRouter();
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.target);
+    const formData = new FormData(e.currentTarget);
 
     try {
-      await login({
+      const result = await loginUser({
         email: formData.get("email") as string,
         password: formData.get("password") as string,
-      }).unwrap(); // .unwrap() throws on error so try/catch works
+      }).unwrap(); 
+      
+      // Save to Redux Filing Cabinet manually (since onQueryStarted isn't used here)
+      dispatch(setUser({ user: result.data.user, token: result.data.token }));
 
       toast.success("Login successful!");
       router.push("/dashboard");
@@ -466,8 +477,7 @@ export default function SigninPage() {
 
   return (
     <form onSubmit={handleSubmit}>
-      <input name="email" type="email" />
-      <input name="password" type="password" />
+      {/* ... inputs ... */}
       <button type="submit" disabled={isLoading}>
         {isLoading ? "Signing in..." : "Sign In"}
       </button>
@@ -478,56 +488,13 @@ export default function SigninPage() {
 
 ---
 
-### Concept 11: Adding a New Feature Slice (e.g., Products)
+### Concept 11: When to Create a New Slice?
 
-When you need **client-side state** (not just API data), create a new slice.
+In this project, we rely almost entirely on **RTK Query** for state management because most of our data comes from the server. 
 
-**Step 1:** Create `src/redux/features/products/productsSlice.ts`
+You **only** need to create a new Slice (like `authSlice.ts`) when you have complex **client-side only state** that must be shared globally across multiple components (e.g., a dark mode toggle, or a multi-step form wizard).
 
-```ts
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-
-const productsSlice = createSlice({
-  name: "products",
-  initialState: {
-    selectedProduct: null,
-    filters: { category: "", price: "" },
-  },
-  reducers: {
-    selectProduct: (state, action: PayloadAction<any>) => {
-      state.selectedProduct = action.payload;
-    },
-    setFilter: (state, action: PayloadAction<{ key: string; value: string }>) => {
-      state.filters[action.payload.key] = action.payload.value;
-    },
-    clearFilters: (state) => {
-      state.filters = { category: "", price: "" };
-    },
-  },
-});
-
-export const { selectProduct, setFilter, clearFilters } = productsSlice.actions;
-export default productsSlice.reducer;
-```
-
-**Step 2:** Register it in `src/redux/features/rootReducer.ts`:
-
-```ts
-import { combineReducers } from "@reduxjs/toolkit";
-import baseApi from "../api/baseApi";
-import authReducer from "./auth/authSlice";
-import productsReducer from "./products/productsSlice"; // ← Add import
-
-const rootReducer = combineReducers({
-  [baseApi.reducerPath]: baseApi.reducer,
-  auth: authReducer,
-  products: productsReducer, // ← Register it here
-});
-
-export default rootReducer;
-```
-
-That's all — now `state.products` exists in your store.
+For 99% of new features (Users, Subscriptions, Notifications), you will only need an `Api.ts` file, and **not** a `Slice.ts` file!
 
 ---
 
@@ -551,63 +518,53 @@ That's all — now `state.products` exists in your store.
 
 ## 📋 PART 4 — BUILDING A FEATURE END-TO-END
 
-### Example: Add a "Users" section to the Admin Dashboard
+### Example: The "Users" section in the Admin Dashboard
 
-**Step 1: Create the RTK Query API**
+**Step 1: The RTK Query API**
 
 ```
-src/redux/features/users/
-├── usersApi.ts     ← GET /users, GET /users/:id, DELETE /users/:id
-└── usersSlice.ts   ← Optional: client state like selectedUser
+src/redux/api/
+├── userApi.ts     ← Contains getUserList, getUserById, deleteUser, etc.
 ```
 
-**Step 2: Create the Pages**
+**Step 2: The Pages**
 
 ```
 src/app/(dashboardLayout)/dashboard/admin/users/
-├── page.tsx           ← /dashboard/admin/users  (list)
-└── [id]/
-    └── page.tsx       ← /dashboard/admin/users/123  (detail)
+├── page.tsx           ← /dashboard/admin/users  (List view)
 ```
 
-**Step 3: Create the Components**
+**Step 3: The Components**
 
 ```
-src/components/users/
-├── UserTable.tsx
-├── UserCard.tsx
-└── UserDeleteButton.tsx
+src/components/
+├── ... (Tables, Cards, etc.)
 ```
 
-**Step 4: Add to the Sidebar**
+**Step 4: The Sidebar Link**
 
-In `AppSidebar.tsx`, `adminUserData.main` already includes `/users`:
+In `AppSidebar.tsx`, the admin navigation connects to `/dashboard/admin/users`.
 
-```ts
-{
-  title: "Customers",
-  path: "/users",     // → /dashboard/admin/users
-  icon: Users,
-},
-```
-
-**Step 5: Connect everything in the page**
+**Step 5: Connecting everything in the page**
 
 ```tsx
 // src/app/(dashboardLayout)/dashboard/admin/users/page.tsx
-"use client"; // ← Needed because we use RTK Query hooks
-import { useGetUsersQuery } from "@/redux/features/users/usersApi";
+"use client"; 
+import { useGetUserListQuery } from "@/redux/api/userApi";
 
 export default function UsersPage() {
-  const { data: users, isLoading, isError } = useGetUsersQuery(undefined);
+  // We use the exact hook generated by userApi.ts
+  const { data, isLoading, isError } = useGetUserListQuery({ page: 1, limit: 10 });
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading) return <div>Loading users...</div>;
   if (isError) return <div>Error loading users</div>;
+
+  const users = data?.data?.data || [];
 
   return (
     <div>
-      <h1>Users</h1>
-      {users?.map(user => <div key={user.id}>{user.name}</div>)}
+      <h1>User Management</h1>
+      {users.map(user => <div key={user.id}>{user.fullName}</div>)}
     </div>
   );
 }
@@ -639,27 +596,28 @@ const dispatch = useAppDispatch();
 ### Pattern 2: Cache Invalidation with Tags
 
 ```ts
-// In usersApi.ts
-getUsers: builder.query({
-  query: () => "/users",
+// In userApi.ts
+getUserList: builder.query({
+  query: (params) => ({ url: "/users", params }),
   providesTags: ["User"],         // ← This query provides "User" data
 }),
 deleteUser: builder.mutation({
-  query: (id) => ({ url: `/users/${id}`, method: "DELETE" }),
-  invalidatesTags: ["User"],      // ← After delete, auto-refetch getUsers
+  query: (id) => ({ url: `/users/delete/${id}`, method: "DELETE" }),
+  invalidatesTags: ["User"],      // ← After delete, auto-refetch getUserList
 }),
 ```
 
-### Pattern 3: Optimistic Updates
+### Pattern 3: Optimistic Updates (Optional but powerful)
 
+If you want the UI to update instantly before the server responds:
 ```ts
 deleteUser: builder.mutation({
-  query: (id) => ({ url: `/users/${id}`, method: "DELETE" }),
+  query: (id) => ({ url: `/users/delete/${id}`, method: "DELETE" }),
   async onQueryStarted(id, { dispatch, queryFulfilled }) {
     // Immediately update the UI before the server responds
     const patchResult = dispatch(
-      usersApi.util.updateQueryData("getUsers", undefined, (draft) => {
-        return draft.filter(user => user.id !== id);
+      userApi.util.updateQueryData("getUserList", {}, (draft) => {
+        // Adjust draft logic based on your PaginatedResponse structure
       })
     );
     try {
@@ -685,6 +643,50 @@ deleteUser: builder.mutation({
 | Mutating state outside of a slice reducer | Only mutate state inside `createSlice` reducers |
 | Using `fetch()` directly when RTK Query is available | Use RTK Query endpoints for all API calls |
 | Using plain `useDispatch`/`useSelector` | Use `useAppDispatch`/`useAppSelector` from `@/hooks/redux` for full type safety |
+
+---
+
+## 🔌 PART 5 — REAL-TIME WEBSOCKETS
+
+This project includes a robust WebSocket implementation for real-time features like chat and notifications.
+
+### Concept 12: `useWebSocket` hook and `WebSocketProvider`
+
+The WebSocket connection is globally provided so any component can access the real-time state.
+
+**1. The Provider (`src/components/providers/WebSocketProvider.tsx`)**
+This component wraps your application and initializes the WebSocket connection automatically when a user logs in (using their Redux token).
+
+**2. The Hook (`src/hooks/useWebSocket.ts`)**
+It manages:
+- Connection state (`isConnected`)
+- Incoming messages and chat history (`messages`)
+- Online users (`onlineUsers`)
+- Unread notifications/messages count (`unreadCount`)
+- Auto-reconnection logic
+
+**Usage in a Component:**
+
+```tsx
+"use client";
+import { useWS } from "@/components/providers/WebSocketProvider";
+
+export function ChatBox() {
+  const { messages, sendMessage, isConnected } = useWS();
+
+  const handleSend = () => {
+    sendMessage("receiver-id-here", "Hello there!");
+  };
+
+  return (
+    <div>
+      <p>Status: {isConnected ? "🟢 Online" : "🔴 Offline"}</p>
+      {messages.map((msg, i) => <div key={i}>{msg.message}</div>)}
+      <button onClick={handleSend}>Send</button>
+    </div>
+  );
+}
+```
 
 ---
 

@@ -30,7 +30,7 @@ export function TeamSwitcher({
   const dispatch = useAppDispatch();
   const router = useRouter();
   const displayName = user?.name ?? "Default User";
-  const displayEmail = user?.email ?? "user@guicopay.gn";
+  const displayEmail = user?.email ?? "user@app.com";
   const displayAvatar = user?.avatar ?? "https://github.com/shadcn.png";
   const displayFallback =
     displayName
@@ -42,10 +42,10 @@ export function TeamSwitcher({
 
   const handleLogout = () => {
     dispatch(logout());
-    Cookies.remove("token");
+    Cookies.remove("auth-token");
     toast.success("Logged out successfully!");
     setTimeout(() => {
-      router.push("/");
+      router.push("/auth/signin");
       router.refresh();
     }, 300);
   };
@@ -87,8 +87,8 @@ export function TeamSwitcher({
               priority
               className="rounded-md"
             /> */}
-            <h2 className="text-[26px] font-semibold text-[#111827]">
-              Guicopay
+            <h2 className="text-[26px] font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+              AppPlatform
             </h2>
           </div>
         </SidebarMenuItem>

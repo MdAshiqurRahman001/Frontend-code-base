@@ -32,7 +32,7 @@ export const baseApi = createApi({
     },
   }),
   endpoints: () => ({}),
-  tagTypes: [],
+  tagTypes: ["Auth", "User", "Notification", "Subscription", "UserSubscription"],
 });
 
 export default baseApi;

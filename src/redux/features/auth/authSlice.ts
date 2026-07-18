@@ -1,35 +1,39 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from "@/redux/store";
+import { User, UserRole } from "@/types";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  avatar?: string;
-  role?: string;
-}
+// ─── Auth State ───────────────────────────────────────────────────────────────
 
 export interface AuthState {
   user: User | null;
   token: string | null;
 }
 
-// ─── Slice ────────────────────────────────────────────────────────────────────
-
 const initialState: AuthState = {
   user: null,
   token: null,
 };
 
+// ─── Slice ────────────────────────────────────────────────────────────────────
+
 const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
-    setUser: (state, action: PayloadAction<{ user: User; token: string }>) => {
+    setUser: (
+      state,
+      action: PayloadAction<{ user: User; token: string }>
+    ) => {
       state.user = action.payload.user;
       state.token = action.payload.token;
+    },
+    setToken: (state, action: PayloadAction<string>) => {
+      state.token = action.payload;
+    },
+    updateUser: (state, action: PayloadAction<Partial<User>>) => {
+      if (state.user) {
+        state.user = { ...state.user, ...action.payload };
+      }
     },
     logout: (state) => {
       state.user = null;
@@ -38,7 +42,7 @@ const authSlice = createSlice({
   },
 });
 
-export const { setUser, logout } = authSlice.actions;
+export const { setUser, setToken, updateUser, logout } = authSlice.actions;
 
 export default authSlice.reducer;
 
@@ -49,3 +53,9 @@ export const selectCurrentUser = (state: RootState): User | null =>
 
 export const selectCurrentToken = (state: RootState): string | null =>
   state.auth.token;
+
+export const selectIsAdmin = (state: RootState): boolean =>
+  state.auth.user?.role === ("ADMIN" as UserRole);
+
+export const selectIsAuthenticated = (state: RootState): boolean =>
+  !!state.auth.token;
