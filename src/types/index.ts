@@ -1,12 +1,25 @@
-// ─── Enums ────────────────────────────────────────────────────────────────────
+/**
+ * ==============================================================================
+ * 📌 GLOBAL TYPES & INTERFACES (types/index.ts)
+ * ==============================================================================
+ * 💡 WHAT IS THIS FILE?
+ * This file contains all global TypeScript definitions used across the starter pack.
+ *
+ * 🛠️ HOW TO CUSTOMIZE:
+ *  - To add a new entity (e.g. `Product` or `Post`), simply add an interface here.
+ * ==============================================================================
+ */
 
-export type UserRole = "ADMIN" | "USER" | "CREATOR" | "CLIENT";
+// ─── Enums & User Roles ────────────────────────────────────────────────────────
+
+export type UserRole = "ADMIN" | "USER" | "MANAGER" | "CREATOR" | "CLIENT";
 
 export type UserStatus =
   | "ACTIVE"
   | "INACTIVE"
   | "SUSPENDED"
   | "BLOCKED"
+  | "PENDING"
   | "DELETED"
   | "REJECTED";
 
@@ -24,7 +37,7 @@ export type PaymentStatus =
   | "FAILED"
   | "COMPLETED";
 
-// ─── User ─────────────────────────────────────────────────────────────────────
+// ─── User Model ───────────────────────────────────────────────────────────────
 
 export interface User {
   id: string;
@@ -33,31 +46,32 @@ export interface User {
   email: string;
   phoneNumber: string | null;
   profileImage: string | null;
-  coverImage: string | null;
+  coverImage?: string | null;
   role: UserRole;
   status: UserStatus;
-  isSocialLogin: boolean;
-  emailVerified: boolean;
-  isBlocked: boolean;
-  isDeleted: boolean;
-  isApproved: boolean;
-  isProfileComplete: boolean | null;
-  lat: number;
-  lon: number;
-  suspendedUntil: string | null;
-  lastLoginAt: string | null;
-  onBoarding: boolean;
-  fcmToken: string | null;
+  isSocialLogin?: boolean;
+  emailVerified?: boolean;
+  isBlocked?: boolean;
+  isDeleted?: boolean;
+  isApproved?: boolean;
+  isProfileComplete?: boolean | null;
+  lat?: number;
+  lon?: number;
+  suspendedUntil?: string | null;
+  lastLoginAt?: string | null;
+  onBoarding?: boolean;
+  fcmToken?: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
-// ─── Auth ─────────────────────────────────────────────────────────────────────
+// ─── Authentication Responses ─────────────────────────────────────────────────
 
 export interface LoginResponse {
   userId: string;
   email: string;
-  emailVerified: boolean;
+  fullName?: string;
+  emailVerified?: boolean;
   role: UserRole;
   token: string;
 }
@@ -72,37 +86,38 @@ export interface OtpVerifyResponse {
   Token: string;
 }
 
-// ─── AppNotification ─────────────────────────────────────────────────────────────
+// ─── Notifications ────────────────────────────────────────────────────────────
 
 export interface AppNotification {
   id: string;
-  userId: string;
+  userId?: string;
   title: string;
   body: string;
-  data: string | null;
+  message?: string;
+  data?: string | null;
   read: boolean;
+  time?: string;
+  category?: "system" | "user" | "order" | "alert" | "payout" | "message";
   createdAt: string;
   updatedAt: string;
 }
 
-// ─── Subscription Offer ───────────────────────────────────────────────────────
+// ─── Subscription & Pricing Plans ─────────────────────────────────────────────
 
 export interface SubscriptionOffer {
   id: string;
-  createdBy: string;
+  createdBy?: string;
   planName: string;
   planType: string;
   facilities: string[];
   price: number;
   duration: number;
-  details: string | null;
-  status: UserStatus;
-  isDeleted: boolean;
-  createdAt: string;
-  updatedAt: string;
+  details?: string | null;
+  status?: UserStatus;
+  isDeleted?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
-
-// ─── User Subscription ────────────────────────────────────────────────────────
 
 export interface UserSubscription {
   id: string;
@@ -110,12 +125,12 @@ export interface UserSubscription {
   subscriptionOfferId: string;
   startDate: string;
   endDate: string;
-  paymentId: string;
-  duration: number | null;
-  paymentStatus: PaymentStatus;
+  paymentId?: string;
+  duration?: number | null;
+  paymentStatus?: PaymentStatus;
   status: SubscriptionStatus;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
   subscriptionOffer?: SubscriptionOffer;
 }
 
@@ -213,8 +228,8 @@ export interface Room {
   id: string;
   senderId: string;
   receiverId: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Chat {
@@ -223,21 +238,24 @@ export interface Chat {
   receiverId: string;
   roomId: string;
   message: string | null;
-  imageUrl: string | null;
+  imageUrl?: string | null;
   isRead: boolean;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-// ─── Analytics & Overview ─────────────────────────────────────────────────────
+// ─── Analytics & Dashboard Stats ──────────────────────────────────────────────
 
 export interface DashboardOverviewStats {
-  totalRevenue: string;
-  activeUsers: string;
-  activeCreators: string;
-  pendingApplications: string;
-  recentVolume: string;
-  escrowBalance: string;
+  totalUsers?: string;
+  totalRevenue?: string;
+  activeSessions?: string;
+  growthRate?: string;
+  activeUsers?: string;
+  activeCreators?: string;
+  pendingApplications?: string;
+  recentVolume?: string;
+  escrowBalance?: string;
 }
 
 export interface RevenuePoint {
@@ -254,39 +272,7 @@ export interface PlatformActivity {
   avatarColor?: string;
 }
 
-// ─── Friend / Follow ──────────────────────────────────────────────────────────
-
-export interface FriendRequest {
-  id: string;
-  senderId: string;
-  receiverId: string;
-  status: ConnectionRequestStatus;
-  ignore: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-// ─── API Response Wrappers ────────────────────────────────────────────────────
-
-export interface PaginationMeta {
-  page: number;
-  limit: number;
-  total: number;
-}
-
-export interface PaginatedResponse<T> {
-  meta: PaginationMeta;
-  data: T[];
-}
-
-export interface ApiResponse<T = unknown> {
-  success: boolean;
-  statusCode: number;
-  message: string;
-  data: T;
-}
-
-// ─── WebSocket Events ─────────────────────────────────────────────────────────
+// ─── WebSocket Types ──────────────────────────────────────────────────────────
 
 export type WsEventType =
   | "authenticate"
@@ -305,4 +291,24 @@ export interface WsMessage {
   receiverId?: string;
   message?: string;
   imageUrl?: string;
+}
+
+// ─── Generic API Response Wrappers ────────────────────────────────────────────
+
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+}
+
+export interface PaginatedResponse<T> {
+  meta: PaginationMeta;
+  data: T[];
+}
+
+export interface ApiResponse<T = unknown> {
+  success: boolean;
+  statusCode: number;
+  message: string;
+  data: T;
 }

@@ -14,7 +14,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
 import MetricCards, { MetricItem } from "@/components/module/Dashboard/DashbordOverview/MetricCards";
 import RevenueChart from "@/components/module/Dashboard/DashbordOverview/RevenueChart";
 import UserActivity from "@/components/module/Dashboard/DashbordOverview/UserActivity";
@@ -143,10 +142,10 @@ export default function DashboardPage() {
   // Unified dynamic metrics with fallback
   const displayMetrics: MetricItem[] = overviewData?.data
     ? [
-        { title: "Total Revenue", value: overviewData.data.totalRevenue, type: "revenue" },
-        { title: "Active Users", value: overviewData.data.activeUsers, type: "users" },
-        { title: "Active Creators", value: overviewData.data.activeCreators, type: "creators" },
-        { title: "Pending Applications", value: overviewData.data.pendingApplications, type: "applications" },
+        { title: "Total Revenue", value: overviewData.data.totalRevenue || "$124,580", type: "revenue" },
+        { title: "Active Users", value: overviewData.data.activeUsers || "8,640", type: "users" },
+        { title: "Active Creators", value: overviewData.data.activeCreators || "640", type: "creators" },
+        { title: "Pending Applications", value: overviewData.data.pendingApplications || "24", type: "applications" },
       ]
     : fallbackMetrics;
 

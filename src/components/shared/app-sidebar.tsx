@@ -134,14 +134,14 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
           className="flex items-center gap-3 font-bold text-lg text-slate-800 transition-opacity hover:opacity-90"
         >
           <div className="size-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 text-white flex items-center justify-center font-black shadow-md shadow-indigo-500/20">
-            D
+            N
           </div>
           <div className="flex flex-col truncate group-data-[collapsible=icon]:hidden">
             <span className="text-sm font-extrabold text-slate-900 leading-none">
-              DevHub Studio
+              NextStarter
             </span>
             <span className="text-[10px] text-slate-400 font-semibold leading-none mt-1">
-              Enterprise Dashboard
+              Admin Dashboard
             </span>
           </div>
         </Link>

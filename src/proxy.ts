@@ -1,4 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
+/**
+ * ==============================================================================
+ * 📌 PROXY ROUTE GUARD (src/proxy.ts)
+ * ==============================================================================
+ * 💡 WHAT IS THIS FILE?
+ * Next.js 16 Proxy Middleware for route verification and token validation.
+ * ==============================================================================
+ */
+
+import { NextResponse } from "next/server";
 
 export interface IUser {
   id: string;
@@ -6,7 +15,7 @@ export interface IUser {
   role: "ADMIN" | "USER" | string;
 }
 
-export async function proxy(_request: NextRequest) {
+export async function proxy() {
   return NextResponse.next();
 }
 

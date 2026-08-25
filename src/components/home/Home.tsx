@@ -1,29 +1,18 @@
 /**
  * ==============================================================================
- * 📌 PUBLIC HOME LANDING PAGE COMPONENT
+ * 📌 PUBLIC WEB HOMEPAGE (src/components/home/Home.tsx)
  * ==============================================================================
  * 💡 WHAT IS THIS FILE?
- * The complete, executive public-facing marketing page assembled with:
- *  - HeroSection (dual CTAs, interactive floating dashboard mockup)
- *  - SocialProof (agency brand logos)
- *  - FeaturesSection (4-pillar value props)
- *  - ShowcaseSection (visual deliverables gallery)
- *  - PricingSection (monthly/annual toggle calculator)
- *  - TestimonialsSection (verified client quotes)
- *  - FaqSection (expandable interactive accordion)
- *  - CtaBanner (high-conversion closing card)
+ * The main landing page showcasing the Next.js 16 + Redux Starter Pack.
  * ==============================================================================
  */
 
 "use client";
 
 import HeroSection from "./HeroSection";
-import SocialProof from "./SocialProof";
+import TechStackSection from "./TechStackSection";
 import FeaturesSection from "./FeaturesSection";
-import ShowcaseSection from "./ShowcaseSection";
-import PricingSection from "./PricingSection";
-import TestimonialsSection from "./TestimonialsSection";
-import FaqSection from "./FaqSection";
+import QuickstartSection from "./QuickstartSection";
 import CtaBanner from "./CtaBanner";
 
 export default function Home() {
@@ -32,25 +21,16 @@ export default function Home() {
       {/* 1. Hero with Dashboard Preview */}
       <HeroSection />
 
-      {/* 2. Brand Logos Marquee */}
-      <SocialProof />
+      {/* 2. Tech Stack Grid */}
+      <TechStackSection />
 
-      {/* 3. Core Value Pillars */}
+      {/* 3. Starter Boilerplate Features */}
       <FeaturesSection />
 
-      {/* 4. Visual Deliverables Gallery */}
-      <ShowcaseSection />
+      {/* 4. Quickstart Guide */}
+      <QuickstartSection />
 
-      {/* 5. Interactive Pricing Calculator */}
-      <PricingSection />
-
-      {/* 6. Client Testimonials & Social Proof */}
-      <TestimonialsSection />
-
-      {/* 7. Frequently Asked Questions */}
-      <FaqSection />
-
-      {/* 8. Closing Call to Action */}
+      {/* 5. Closing CTA */}
       <CtaBanner />
     </main>
   );
