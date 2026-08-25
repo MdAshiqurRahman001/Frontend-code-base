@@ -123,7 +123,7 @@ export const userApi = baseApi.injectEndpoints({
       }),
     }),
   }),
-  overrideExisting: false,
+  overrideExisting: true,
 });
 
 export const {

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { SubscriptionOffer, UserSubscription } from "@/types";
@@ -83,7 +84,7 @@ export default function SubscriptionCard({
 
         {/* Features */}
         <ul className="flex flex-col gap-2 mb-5">
-          {offer.facilities.map((facility, i) => (
+          {(offer?.facilities || (offer as any)?.features || []).map((facility: string, i: number) => (
             <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
               <CheckCircle size={16} className="text-emerald-500 flex-shrink-0 mt-0.5" />
               {facility}

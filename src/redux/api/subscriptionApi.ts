@@ -120,7 +120,7 @@ export const subscriptionApi = baseApi.injectEndpoints({
       invalidatesTags: ["UserSubscription"],
     }),
   }),
-  overrideExisting: false,
+  overrideExisting: true,
 });
 
 export const {

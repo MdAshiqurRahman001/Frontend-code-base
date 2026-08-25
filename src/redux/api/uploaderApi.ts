@@ -10,6 +10,7 @@ export const uploaderApi = baseApi.injectEndpoints({
       }),
     }),
   }),
+  overrideExisting: true,
 });
 
 export const { useUploadFileMutation } = uploaderApi;
