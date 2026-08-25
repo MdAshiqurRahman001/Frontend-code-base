@@ -1,8 +1,13 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { NRTable } from "@/components/ui/core/NRTable";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ArrowRight } from "lucide-react";
+import Link from "next/link";
+import { toast } from "sonner";
 
 interface Creator {
   name: string;
@@ -19,7 +24,7 @@ interface PayoutData {
   status: string;
 }
 
-const columns: ColumnDef<PayoutData>[] = [
+const columns: ColumnDef<PayoutData, any>[] = [
   {
     accessorKey: "creator",
     header: "CREATOR",
@@ -27,14 +32,16 @@ const columns: ColumnDef<PayoutData>[] = [
       const creator = row.original.creator;
       return (
         <div className="flex items-center gap-3 py-1">
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs tracking-wider shrink-0 ${creator.avatarBg} ${creator.avatarText}`}>
+          <div
+            className={`w-9 h-9 rounded-xl flex items-center justify-center font-extrabold text-xs shadow-2xs shrink-0 ${creator.avatarBg} ${creator.avatarText}`}
+          >
             {creator.initials}
           </div>
           <div className="flex flex-col">
-            <span className="font-bold text-slate-800 text-sm leading-tight">
+            <span className="font-bold text-slate-900 text-xs leading-tight">
               {creator.name}
             </span>
-            <span className="text-[11px] font-bold text-slate-400 mt-0.5">
+            <span className="text-[10px] font-semibold text-slate-400 mt-0.5">
               {creator.role}
             </span>
           </div>
@@ -47,7 +54,7 @@ const columns: ColumnDef<PayoutData>[] = [
     header: "AMOUNT",
     cell: ({ row }) => {
       return (
-        <span className="font-extrabold text-slate-800 text-sm tracking-tight">
+        <span className="font-extrabold text-slate-900 text-xs">
           {row.original.amount}
         </span>
       );
@@ -58,22 +65,26 @@ const columns: ColumnDef<PayoutData>[] = [
     header: "STATUS",
     cell: ({ row }) => {
       return (
-        <span className="inline-block px-3 py-1.5 text-[9px] font-bold text-slate-500 bg-slate-100 rounded-md tracking-wider leading-none">
+        <Badge className="bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-md">
           {row.original.status}
-        </span>
+        </Badge>
       );
     },
   },
   {
     id: "action",
     header: "ACTION",
-    cell: () => {
+    cell: ({ row }) => {
       return (
-        <div className="flex justify-start">
-          <Button className="px-5 py-1.5 bg-[#2A2A2A] hover:bg-black text-white text-xs font-semibold rounded-full transition-all duration-200 shadow-sm hover:shadow active:scale-95 cursor-pointer">
-            Review
-          </Button>
-        </div>
+        <Button
+          onClick={() =>
+            toast.success(`Approved payout of ${row.original.amount} for ${row.original.creator.name}`)
+          }
+          size="sm"
+          className="h-7 px-3 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-semibold rounded-lg shadow-2xs"
+        >
+          Quick Approve
+        </Button>
       );
     },
   },
@@ -83,12 +94,28 @@ interface PendingPayoutsProps {
   data: PayoutData[];
 }
 
-const PendingPayouts = ({ data = [] }: PendingPayoutsProps) => {
+export const PendingPayouts = ({ data = [] }: PendingPayoutsProps) => {
   return (
-    <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm w-full">
-      <div className="mb-4">
-        <h3 className="text-lg font-bold text-slate-800">Pending Payouts</h3>
+    <div className="bg-white p-6 rounded-2xl border border-slate-100/90 shadow-2xs w-full">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3 className="text-base font-extrabold text-slate-900 tracking-tight">
+            Pending Creator Payouts
+          </h3>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Withdrawal requests requiring administrative clearance
+          </p>
+        </div>
+
+        <Link
+          href="/dashboard/payouts"
+          className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 hover:underline"
+        >
+          <span>View All</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </Link>
       </div>
+
       <NRTable columns={columns} data={data} />
     </div>
   );

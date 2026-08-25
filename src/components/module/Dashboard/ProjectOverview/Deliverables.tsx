@@ -23,7 +23,7 @@ import {
 import { toast } from "sonner";
 import Image from "next/image";
 
-interface Deliverable {
+export interface Deliverable {
   id: number;
   title: string;
   type: "JPG" | "MP4";
@@ -31,16 +31,41 @@ interface Deliverable {
   url: string;
 }
 
-interface DeliverablesProps {
-  deliverables: Deliverable[];
-  onAddDeliverable: (deliverable: Omit<Deliverable, "id">) => void;
+const defaultSampleDeliverables: Deliverable[] = [
+  {
+    id: 1,
+    title: "Brand Moodboard & Logo Concepts",
+    type: "JPG",
+    sizeOrStatus: "12.4 MB • Approved",
+    url: "/images/portfolio_main.png",
+  },
+  {
+    id: 2,
+    title: "Mobile UI Wireframe Prototype",
+    type: "JPG",
+    sizeOrStatus: "8.2 MB • Approved",
+    url: "/images/portfolio_abstract.png",
+  },
+  {
+    id: 3,
+    title: "Product Launch Hero Animation",
+    type: "MP4",
+    sizeOrStatus: "45 MB • In Review",
+    url: "",
+  },
+];
+
+export interface DeliverablesProps {
+  deliverables?: Deliverable[];
+  onAddDeliverable?: (deliverable: Omit<Deliverable, "id">) => void;
+  projectStatus?: string;
 }
 
 export default function Deliverables({
-  deliverables,
+  deliverables = defaultSampleDeliverables,
   onAddDeliverable,
 }: DeliverablesProps) {
-  // Lightbox state
+  const [items, setItems] = useState<Deliverable[]>(deliverables);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   // Upload dialog state
@@ -58,15 +83,26 @@ export default function Deliverables({
     }
 
     const sizeOrStatus = newType === "JPG" ? `${newSize} • ${newStatus}` : newStatus;
-
-    onAddDeliverable({
+    const newDeliverable: Deliverable = {
+      id: Date.now(),
       title: newTitle,
       type: newType,
       sizeOrStatus,
       url: newType === "JPG" ? "/images/latte_art.png" : "",
-    });
+    };
 
-    toast.success("Deliverable added successfully");
+    setItems((prev) => [...prev, newDeliverable]);
+
+    if (onAddDeliverable) {
+      onAddDeliverable({
+        title: newTitle,
+        type: newType,
+        sizeOrStatus,
+        url: newDeliverable.url,
+      });
+    }
+
+    toast.success("Deliverable added successfully!");
     setIsUploadOpen(false);
 
     // Reset form
@@ -85,7 +121,7 @@ export default function Deliverables({
   };
 
   return (
-    <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col gap-6 hover:shadow-md transition-all duration-300 w-full">
+    <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs flex flex-col gap-6 hover:shadow-md transition-all duration-300 w-full">
       <div className="flex justify-between items-center w-full">
         <h2 className="text-lg font-bold text-slate-800 tracking-tight">
           Deliverables & Assets
@@ -94,7 +130,7 @@ export default function Deliverables({
           onClick={() => setIsUploadOpen(true)}
           variant="outline"
           size="sm"
-          className="border-blue-100 hover:bg-blue-50 text-blue-600 font-semibold gap-1.5 rounded-lg text-xs"
+          className="border-indigo-100 hover:bg-indigo-50 text-indigo-600 font-semibold gap-1.5 rounded-lg text-xs"
         >
           <Plus className="w-3.5 h-3.5" />
           Add Deliverable
@@ -102,15 +138,15 @@ export default function Deliverables({
       </div>
 
       {/* Grid of asset cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 w-full">
-        {deliverables.map((item) => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full">
+        {items.map((item) => (
           <div
             key={item.id}
             onClick={() => handleCardClick(item)}
-            className="flex flex-col border border-slate-100 rounded-xl overflow-hidden hover:shadow-lg hover:border-slate-200 transition-all duration-300 cursor-pointer group"
+            className="flex flex-col border border-slate-100 rounded-xl overflow-hidden hover:shadow-md hover:border-slate-200 transition-all duration-300 cursor-pointer group"
           >
             {/* Thumbnail Header Block */}
-            <div className="relative h-36 w-full bg-slate-50 flex items-center justify-center overflow-hidden">
+            <div className="relative h-32 w-full bg-slate-50 flex items-center justify-center overflow-hidden">
               {item.type === "JPG" && item.url ? (
                 <div className="relative w-full h-full">
                   <Image
@@ -122,29 +158,28 @@ export default function Deliverables({
                   <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-10 transition-opacity duration-300" />
                 </div>
               ) : item.type === "MP4" ? (
-                <div className="w-full h-full bg-[#EEF2F6] flex items-center justify-center text-blue-600 transition-colors group-hover:bg-[#E2E8F0]">
-                  {/* Film icon or Play icon */}
+                <div className="w-full h-full bg-indigo-50/50 flex items-center justify-center text-indigo-600 transition-colors group-hover:bg-indigo-100/50">
                   {item.title.toLowerCase().includes("reels") ? (
-                    <Film className="w-10 h-10 stroke-[1.5] group-hover:scale-110 transition-transform duration-300" />
+                    <Film className="w-8 h-8 stroke-[1.5] group-hover:scale-110 transition-transform duration-300" />
                   ) : (
-                    <Play className="w-10 h-10 stroke-[1.5] group-hover:scale-110 transition-transform duration-300" />
+                    <Play className="w-8 h-8 stroke-[1.5] group-hover:scale-110 transition-transform duration-300" />
                   )}
                 </div>
               ) : (
                 <div className="w-full h-full bg-[#F8FAFC] flex items-center justify-center text-slate-400">
-                  <ImageIcon className="w-10 h-10 stroke-[1.5]" />
+                  <ImageIcon className="w-8 h-8 stroke-[1.5]" />
                 </div>
               )}
 
               {/* Tag indicator on top right */}
-              <div className="absolute top-2.5 right-2.5 bg-black/60 backdrop-blur-xs text-white px-2 py-0.5 rounded-md text-[9px] font-extrabold tracking-wider select-none">
+              <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-xs text-white px-2 py-0.5 rounded-md text-[9px] font-extrabold tracking-wider select-none">
                 {item.type}
               </div>
             </div>
 
             {/* Info Footer Block */}
-            <div className="p-4 flex flex-col gap-1 bg-white">
-              <h3 className="text-xs font-bold text-slate-800 line-clamp-1 group-hover:text-blue-600 transition-colors duration-200">
+            <div className="p-3 flex flex-col gap-0.5 bg-white">
+              <h3 className="text-xs font-bold text-slate-800 line-clamp-1 group-hover:text-indigo-600 transition-colors duration-200">
                 {item.title}
               </h3>
               <span className="text-[10px] font-medium text-slate-400">
@@ -157,15 +192,15 @@ export default function Deliverables({
         {/* Dash Upload Placeholder card */}
         <div
           onClick={() => setIsUploadOpen(true)}
-          className="flex flex-col items-center justify-center h-52 border-2 border-dashed border-slate-200 hover:border-blue-400 hover:bg-blue-50/20 rounded-xl transition-all duration-300 cursor-pointer group"
+          className="flex flex-col items-center justify-center h-44 border-2 border-dashed border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/20 rounded-xl transition-all duration-300 cursor-pointer group"
         >
-          <div className="p-3 bg-slate-50 text-slate-400 rounded-full group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors duration-300">
-            <Plus className="w-5 h-5" />
+          <div className="p-2.5 bg-slate-50 text-slate-400 rounded-full group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-colors duration-300">
+            <Plus className="w-4 h-4" />
           </div>
-          <span className="text-xs font-bold text-slate-500 group-hover:text-blue-600 transition-colors mt-3">
+          <span className="text-xs font-bold text-slate-500 group-hover:text-indigo-600 transition-colors mt-2">
             Add New Asset
           </span>
-          <span className="text-[10px] text-slate-400 mt-1">
+          <span className="text-[10px] text-slate-400 mt-0.5">
             JPG or MP4 format
           </span>
         </div>
@@ -284,7 +319,7 @@ export default function Deliverables({
               </Button>
               <Button
                 type="submit"
-                className="font-semibold bg-blue-600 hover:bg-blue-700 text-white"
+                className="font-semibold bg-indigo-600 hover:bg-indigo-700 text-white"
               >
                 Add Deliverable
               </Button>

@@ -1,146 +1,193 @@
+/**
+ * ==============================================================================
+ * 📌 NOTIFICATIONS CENTER PAGE (/dashboard/notifications)
+ * ==============================================================================
+ * 💡 WHAT IS THIS FILE?
+ * This page displays all platform notifications and alerts.
+ * It includes:
+ *  - Category filter tabs (All, Orders, Payouts, Messages, System)
+ *  - "Mark All as Read" & "Clear All" batch actions
+ *  - Individual notification status toggles
+ * ==============================================================================
+ */
+
 "use client";
 
-import {
-  useGetMyNotificationsQuery,
-  useGetUnreadNotificationsQuery,
-  useMarkNotificationsReadMutation,
-  useDeleteNotificationMutation,
-} from "@/redux/api/notificationApi";
-import { AppNotification } from "@/types";
-import { Bell, Check, CheckCheck, Loader2, Trash2 } from "lucide-react";
-import { formatDistanceToNow } from "@/components/dashboard/dateUtils";
 import { useState } from "react";
+import { DEMO_NOTIFICATIONS, DemoNotification } from "@/constants/demoData";
+import { Button } from "@/components/ui/button";
+import {
+  Bell,
+  CheckCheck,
+  Trash2,
+  Package,
+  Banknote,
+  MessageSquare,
+  Sparkles,
+} from "lucide-react";
+import { toast } from "sonner";
 
 export default function NotificationsPage() {
-  const [page, setPage] = useState(1);
-  const limit = 15;
+  const [notifications, setNotifications] =
+    useState<DemoNotification[]>(DEMO_NOTIFICATIONS);
+  const [activeTab, setActiveTab] = useState<string>("all");
 
-  const { data, isLoading, isFetching } = useGetMyNotificationsQuery({ page, limit });
-  const { data: unreadData } = useGetUnreadNotificationsQuery();
-  const [markRead, { isLoading: isMarking }] = useMarkNotificationsReadMutation();
-  const [deleteNotif] = useDeleteNotificationMutation();
+  const filteredNotifications = notifications.filter(
+    (n) => activeTab === "all" || n.category === activeTab
+  );
 
-  const notifications: AppNotification[] = data?.data?.data ?? [];
-  const total = data?.data?.meta?.total ?? 0;
-  const totalPages = Math.ceil(total / limit);
-  const unreadCount = unreadData?.data?.length ?? 0;
+  const handleMarkAllRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    toast.success("All notifications marked as read!");
+  };
+
+  const handleClearAll = () => {
+    setNotifications([]);
+    toast.info("Notification inbox cleared.");
+  };
+
+  const handleToggleRead = (id: string) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read: !n.read } : n))
+    );
+  };
+
+  const handleDeleteNotification = (id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    toast.error("Notification removed.");
+  };
+
+  const getCategoryIcon = (cat: DemoNotification["category"]) => {
+    switch (cat) {
+      case "payout":
+        return <Banknote className="w-5 h-5 text-emerald-600" />;
+      case "order":
+        return <Package className="w-5 h-5 text-indigo-600" />;
+      case "message":
+        return <MessageSquare className="w-5 h-5 text-sky-600" />;
+      case "system":
+      default:
+        return <Sparkles className="w-5 h-5 text-purple-600" />;
+    }
+  };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-4 py-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-6 w-full pb-10">
+      {/* 1. Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Notifications</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            {unreadCount > 0 ? (
-              <span className="text-indigo-600 font-medium">{unreadCount} unread</span>
-            ) : (
-              "All caught up!"
-            )}
-            {" "}· {total} total
+          <h1 className="text-2xl font-extrabold text-slate-800 tracking-tight">
+            Notifications Center
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Stay updated with real-time alerts, project milestones, and payout receipts.
           </p>
         </div>
-        {unreadCount > 0 && (
-          <button
-            onClick={() => markRead()}
-            disabled={isMarking}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-50 text-indigo-700 text-sm font-medium hover:bg-indigo-100 transition-colors disabled:opacity-60"
+
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={handleMarkAllRead}
+            variant="outline"
+            size="sm"
+            className="text-xs font-semibold gap-1.5"
           >
-            {isMarking ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <CheckCheck size={14} />
-            )}
-            Mark all read
-          </button>
-        )}
+            <CheckCheck className="w-4 h-4" /> Mark All as Read
+          </Button>
+          <Button
+            onClick={handleClearAll}
+            variant="ghost"
+            size="sm"
+            className="text-xs font-semibold text-slate-400 hover:text-red-600 hover:bg-red-50"
+          >
+            Clear All
+          </Button>
+        </div>
       </div>
 
-      {/* List */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 size={28} className="animate-spin text-indigo-500" />
-          </div>
-        ) : notifications.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 py-20 text-gray-400">
-            <Bell size={40} className="opacity-30" />
-            <p className="text-sm">No notifications yet</p>
+      {/* 2. Filter Tabs */}
+      <div className="flex items-center gap-2 p-1.5 bg-white rounded-2xl border border-slate-100 shadow-xs w-fit">
+        {[
+          { id: "all", label: "All Alerts" },
+          { id: "payout", label: "Payouts" },
+          { id: "order", label: "Projects" },
+          { id: "message", label: "Messages" },
+          { id: "system", label: "System" },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              activeTab === tab.id
+                ? "bg-indigo-600 text-white shadow-sm"
+                : "text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* 3. Notifications List */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-xs divide-y divide-slate-50 overflow-hidden">
+        {filteredNotifications.length === 0 ? (
+          <div className="p-12 text-center flex flex-col items-center gap-3">
+            <Bell className="w-10 h-10 text-slate-300 stroke-[1.5]" />
+            <h3 className="font-bold text-sm text-slate-700">No notifications found</h3>
+            <p className="text-xs text-slate-400">You are all caught up!</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-50">
-            {notifications.map((n) => (
-              <div
-                key={n.id}
-                className={`flex items-start gap-4 px-5 py-4 hover:bg-gray-50 transition-colors ${
-                  !n.read ? "bg-indigo-50/40" : ""
-                }`}
-              >
-                {/* Icon */}
-                <div className={`flex-shrink-0 mt-0.5 w-9 h-9 rounded-xl flex items-center justify-center ${
-                  !n.read
-                    ? "bg-indigo-100 text-indigo-600"
-                    : "bg-gray-100 text-gray-500"
-                }`}>
-                  {!n.read ? <Bell size={16} /> : <Check size={16} />}
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className={`text-sm font-semibold ${!n.read ? "text-gray-900" : "text-gray-700"}`}>
-                      {n.title}
-                    </p>
-                    <span className="flex-shrink-0 text-xs text-gray-400">
-                      {formatDistanceToNow(n.createdAt)}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-500 mt-0.5">{n.body}</p>
-                  {!n.read && (
-                    <span className="inline-block mt-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-                      NEW
-                    </span>
-                  )}
-                </div>
-
-                {/* Delete */}
-                <button
-                  onClick={() => deleteNotif(n.id)}
-                  className="flex-shrink-0 p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors"
-                  aria-label="Delete notification"
-                >
-                  <Trash2 size={14} />
-                </button>
+          filteredNotifications.map((notif) => (
+            <div
+              key={notif.id}
+              className={`p-5 flex items-start gap-4 transition-colors ${
+                notif.read ? "bg-white" : "bg-indigo-50/30"
+              }`}
+            >
+              <div className="p-3 bg-slate-50 rounded-2xl shrink-0">
+                {getCategoryIcon(notif.category)}
               </div>
-            ))}
-          </div>
+
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-sm text-slate-800">
+                      {notif.title}
+                    </h3>
+                    {!notif.read && (
+                      <span className="w-2 h-2 rounded-full bg-indigo-600" />
+                    )}
+                  </div>
+                  <span className="text-[11px] font-semibold text-slate-400 shrink-0">
+                    {notif.time}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  {notif.message}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-1 shrink-0">
+                <Button
+                  onClick={() => handleToggleRead(notif.id)}
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs font-semibold text-slate-400 hover:text-slate-700"
+                >
+                  {notif.read ? "Mark unread" : "Mark read"}
+                </Button>
+                <Button
+                  onClick={() => handleDeleteNotification(notif.id)}
+                  variant="ghost"
+                  size="sm"
+                  className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          ))
         )}
       </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between pt-2">
-          <p className="text-sm text-gray-500">
-            Page {page} of {totalPages}
-          </p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1 || isFetching}
-              className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
-            >
-              ← Prev
-            </button>
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages || isFetching}
-              className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
-            >
-              Next →
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

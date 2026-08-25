@@ -4,19 +4,20 @@
 import { Form } from "@/components/ui/form";
 import { ReactNode } from "react";
 import {
-  FieldValues,
   FormProvider,
   SubmitHandler,
   useForm,
 } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 type TFormConfig = {
   defaultValues?: Record<string, any>;
   resolver?: any;
+  schema?: any;
 };
 
 type TFormProps = {
-  onSubmit: SubmitHandler<FieldValues>;
+  onSubmit: SubmitHandler<any>;
   children: ReactNode;
 } & TFormConfig;
 
@@ -25,15 +26,17 @@ const NRForm = ({
   children,
   defaultValues,
   resolver,
+  schema,
 }: TFormProps) => {
-  const formConfig: TFormConfig = {};
+  const formConfig: any = {};
 
   if (defaultValues) formConfig.defaultValues = defaultValues;
-  if (resolver) formConfig.resolver = resolver;
+  if (schema) formConfig.resolver = zodResolver(schema);
+  else if (resolver) formConfig.resolver = resolver;
 
   const methods = useForm(formConfig);
 
-  const submit: SubmitHandler<FieldValues> = (data) => {
+  const submit: SubmitHandler<any> = (data) => {
     onSubmit(data);
     methods.reset();
   };

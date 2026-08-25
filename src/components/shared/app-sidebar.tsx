@@ -1,3 +1,13 @@
+/**
+ * ==============================================================================
+ * 📌 APP SIDEBAR (Main Navigation System)
+ * ==============================================================================
+ * 💡 WHAT IS THIS FILE?
+ * This component renders the collapsible dashboard sidebar with organized
+ * category sections: CORE PLATFORM, COMMERCE & BILLING, COMMUNICATIONS, and SETTINGS.
+ * ==============================================================================
+ */
+
 "use client";
 
 import {
@@ -8,108 +18,142 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import {
-  Boxes,
-  CreditCard,
   LayoutDashboard,
   Users,
-  Bell,
+  FolderKanban,
+  Package,
+  CreditCard,
+  Banknote,
   MessageSquare,
+  Bell,
+  Sparkles,
+  UserCheck,
   LifeBuoy,
 } from "lucide-react";
 import Link from "next/link";
-import { NavMain } from "./nav-main";
+import { NavMain, NavSection } from "./nav-main";
 import { NavUser } from "./nav-user";
 
-const defaultNavData = {
-  user: {
-    navMain: [
+export const sidebarSections: NavSection[] = [
+  {
+    groupLabel: "CORE PLATFORM",
+    items: [
       {
-        title: "Dashboard",
+        title: "Overview",
         url: "/dashboard",
         icon: LayoutDashboard,
       },
       {
-        title: "Messages",
-        url: "/dashboard/messages",
-        icon: MessageSquare,
+        title: "User Directory",
+        url: "/dashboard/admin/users",
+        icon: Users,
+        badge: "NEW",
+        badgeColor: "bg-purple-50 text-purple-700 border border-purple-100",
+      },
+      {
+        title: "Projects",
+        url: "/dashboard/projects",
+        icon: FolderKanban,
+      },
+      {
+        title: "Packages",
+        url: "/dashboard/packages",
+        icon: Package,
+      },
+    ],
+  },
+  {
+    groupLabel: "COMMERCE & BILLING",
+    items: [
+      {
+        title: "Payments",
+        url: "/dashboard/payments",
+        icon: CreditCard,
+      },
+      {
+        title: "Payouts Review",
+        url: "/dashboard/payouts",
+        icon: Banknote,
+        badge: "3",
+        badgeColor: "bg-amber-50 text-amber-700 border border-amber-200",
       },
       {
         title: "Subscriptions",
         url: "/dashboard/subscriptions",
-        icon: CreditCard,
+        icon: Sparkles,
+      },
+    ],
+  },
+  {
+    groupLabel: "COMMUNICATIONS",
+    items: [
+      {
+        title: "Direct Messages",
+        url: "/dashboard/messages",
+        icon: MessageSquare,
+        badge: "2",
+        badgeColor: "bg-emerald-50 text-emerald-700 border border-emerald-200",
       },
       {
         title: "Notifications",
         url: "/dashboard/notifications",
         icon: Bell,
+        badge: "4",
+        badgeColor: "bg-indigo-50 text-indigo-700 border border-indigo-200",
+      },
+    ],
+  },
+  {
+    groupLabel: "SETTINGS & HELP",
+    items: [
+      {
+        title: "Profile Settings",
+        url: "/dashboard/profile",
+        icon: UserCheck,
       },
       {
-        title: "Support",
+        title: "Support & FAQ",
         url: "/dashboard/support",
         icon: LifeBuoy,
       },
     ],
   },
-  admin: {
-    navMain: [
-      {
-        title: "Dashboard",
-        url: "/dashboard/admin",
-        icon: LayoutDashboard,
-      },
-      {
-        title: "Users",
-        url: "/dashboard/admin/users",
-        icon: Users,
-      },
-      {
-        title: "Subscriptions",
-        url: "/dashboard/admin/subscriptions",
-        icon: Boxes,
-      },
-      {
-        title: "Notifications",
-        url: "/dashboard/admin/notifications",
-        icon: Bell,
-      },
-      {
-        title: "Messages",
-        url: "/dashboard/messages",
-        icon: MessageSquare,
-      },
-    ],
-  },
-};
+];
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   role?: string;
-  customData?: typeof defaultNavData;
 }
 
-export function AppSidebar({
-  role = "user",
-  customData = defaultNavData,
-  ...props
-}: AppSidebarProps) {
-  const currentRoleKey = (role?.toLowerCase() === "admin" ? "admin" : "user") as keyof typeof defaultNavData;
-  const sidebarData = customData[currentRoleKey] || defaultNavData.user;
-
+export function AppSidebar({ ...props }: AppSidebarProps) {
   return (
-    <Sidebar collapsible="icon" className="border-r border-border/40" {...props}>
-      <SidebarHeader className="border-b border-border/40 p-4">
-        <Link href="/" className="flex items-center gap-2 font-bold text-lg text-primary">
-          <div className="size-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-black">
-            V
+    <Sidebar collapsible="icon" className="border-r border-slate-100 bg-white" {...props}>
+      {/* Brand Header */}
+      <SidebarHeader className="border-b border-slate-100 p-4">
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-3 font-bold text-lg text-slate-800 transition-opacity hover:opacity-90"
+        >
+          <div className="size-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 text-white flex items-center justify-center font-black shadow-md shadow-indigo-500/20">
+            D
           </div>
-          <span className="truncate group-data-[collapsible=icon]:hidden">
-            App Dashboard
-          </span>
+          <div className="flex flex-col truncate group-data-[collapsible=icon]:hidden">
+            <span className="text-sm font-extrabold text-slate-900 leading-none">
+              DevHub Studio
+            </span>
+            <span className="text-[10px] text-slate-400 font-semibold leading-none mt-1">
+              Enterprise Dashboard
+            </span>
+          </div>
         </Link>
       </SidebarHeader>
-      <SidebarContent>
-        <NavMain items={sidebarData?.navMain} />
+
+      {/* Navigation Sections */}
+      <SidebarContent className="px-3 py-4">
+        <NavMain sections={sidebarSections} />
       </SidebarContent>
-      <SidebarFooter className="border-t border-border/40">
+
+      {/* User Footer */}
+      <SidebarFooter className="border-t border-slate-100 p-2">
         <NavUser />
       </SidebarFooter>
       <SidebarRail />

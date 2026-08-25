@@ -34,7 +34,7 @@ export default function Timeline({ milestones, onUpdateStatus }: TimelineProps) 
         );
       case "IN PROGRESS":
         return (
-          <Badge className="bg-blue-50 text-blue-600 hover:bg-blue-50 border border-blue-200/50 rounded-md font-bold text-[10px] tracking-wider py-0.5 px-2 animate-pulse">
+          <Badge className="bg-indigo-50 text-indigo-600 hover:bg-indigo-50 border border-indigo-200/50 rounded-md font-bold text-[10px] tracking-wider py-0.5 px-2 animate-pulse">
             IN PROGRESS
           </Badge>
         );
@@ -52,14 +52,14 @@ export default function Timeline({ milestones, onUpdateStatus }: TimelineProps) 
     switch (status) {
       case "COMPLETED":
         return (
-          <div className="w-8 h-8 rounded-full bg-blue-600 border-4 border-white shadow-sm flex items-center justify-center text-white z-10">
+          <div className="w-8 h-8 rounded-full bg-emerald-600 border-4 border-white shadow-sm flex items-center justify-center text-white z-10">
             <Check className="w-4 h-4 stroke-[3]" />
           </div>
         );
       case "IN PROGRESS":
         return (
-          <div className="w-8 h-8 rounded-full bg-white border-[3px] border-blue-600 shadow-sm flex items-center justify-center text-blue-600 z-10">
-            <div className="w-2.5 h-2.5 rounded-full bg-blue-600" />
+          <div className="w-8 h-8 rounded-full bg-white border-[3px] border-indigo-600 shadow-sm flex items-center justify-center text-indigo-600 z-10">
+            <div className="w-2.5 h-2.5 rounded-full bg-indigo-600" />
           </div>
         );
       case "UPCOMING":

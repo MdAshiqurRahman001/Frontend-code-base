@@ -15,34 +15,37 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useFormContext } from "react-hook-form";
 
-type TPHSelectProps = {
+export type NRSelectProps = {
   label: string;
   name: string;
-  control: any;
+  control?: any;
   disabled?: boolean;
-  options?:
-    | {
-        value: string;
-        label: string;
-        disabled?: boolean;
-      }[];
+  options?: {
+    value: string;
+    label: string;
+    disabled?: boolean;
+  }[];
 };
 
-const PHSelect = ({
+export const NRSelect = ({
   label,
   name,
   control,
   options,
   disabled,
-}: TPHSelectProps) => {
+}: NRSelectProps) => {
+  const methods = useFormContext();
+  const resolvedControl = control || methods?.control;
+
   return (
     <FormField
-      control={control}
+      control={resolvedControl}
       name={name}
       render={({ field }) => (
-        <FormItem className="space-y-2 w-full">
-          <FormLabel>{label}</FormLabel>
+        <FormItem className="space-y-1.5 w-full">
+          <FormLabel className="text-xs font-semibold text-slate-700">{label}</FormLabel>
 
           <FormControl>
             <Select
@@ -50,16 +53,17 @@ const PHSelect = ({
               onValueChange={field.onChange}
               value={field.value}
             >
-              <SelectTrigger className="w-full py-6">
+              <SelectTrigger className="w-full py-5 text-xs rounded-xl">
                 <SelectValue placeholder={`Select ${label}`} />
               </SelectTrigger>
 
-              <SelectContent>
+              <SelectContent className="bg-white rounded-xl shadow-md border border-slate-100">
                 {options?.map((opt) => (
                   <SelectItem
                     key={opt.value}
                     value={opt.value}
                     disabled={opt.disabled}
+                    className="text-xs py-2 cursor-pointer"
                   >
                     {opt.label}
                   </SelectItem>
@@ -75,5 +79,5 @@ const PHSelect = ({
   );
 };
 
-export { PHSelect };
-export default PHSelect;
+export const PHSelect = NRSelect;
+export default NRSelect;

@@ -1,235 +1,261 @@
+/**
+ * ==============================================================================
+ * 📌 MESSAGES & CHAT PAGE (/dashboard/messages)
+ * ==============================================================================
+ * 💡 WHAT IS THIS FILE?
+ * This is an interactive direct messaging & live chat interface.
+ * It includes:
+ *  - Contact List with search, online badges, and unread counters
+ *  - Active Chat Stream with timestamps and avatar bubbles
+ *  - Message Input Bar (type & send messages with instant UI update)
+ *  - Quick predefined reply buttons
+ * ==============================================================================
+ */
+
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useAppSelector } from "@/hooks/redux";
-import { selectCurrentToken, selectCurrentUser } from "@/redux/features/auth/authSlice";
-import { useGetUserListQuery } from "@/redux/api/userApi";
-import { useWebSocket } from "@/hooks/useWebSocket";
-import { Chat, User } from "@/types";
-import { Send, MessageSquare, Loader2, Image as ImageIcon, Wifi, WifiOff } from "lucide-react";
-import Image from "next/image";
-import { formatDistanceToNow } from "@/components/dashboard/dateUtils";
+import { useState } from "react";
+import { DEMO_CHAT_CONTACTS, DemoChatContact, DemoMessage } from "@/constants/demoData";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Search, Send, CheckCheck, Smile } from "lucide-react";
+import { toast } from "sonner";
 
 export default function MessagesPage() {
-  const token = useAppSelector(selectCurrentToken);
-  const currentUser = useAppSelector(selectCurrentUser);
-  const {
-    isConnected,
-    messages,
-    onlineUsers,
-    sendMessage,
-    fetchChats,
-    requestOnlineUsers,
-    clearMessages,
-  } = useWebSocket(token);
+  const [contacts, setContacts] = useState<DemoChatContact[]>(DEMO_CHAT_CONTACTS);
+  const [selectedContactId, setSelectedContactId] = useState<string>(DEMO_CHAT_CONTACTS[0].id);
+  const [inputText, setInputText] = useState("");
 
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [input, setInput] = useState("");
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const activeContact =
+    contacts.find((c) => c.id === selectedContactId) || contacts[0];
 
-  const { data: usersData, isLoading: isLoadingUsers } = useGetUserListQuery(
-    { limit: 50 },
-    { skip: !token }
-  );
-  const users = (usersData?.data?.data ?? []).filter((u) => u.id !== currentUser?.id);
+  const handleSendMessage = () => {
+    if (!inputText.trim()) return;
 
-  useEffect(() => {
-    if (isConnected) {
-      requestOnlineUsers();
-    }
-  }, [isConnected, requestOnlineUsers]);
+    const newMsg: DemoMessage = {
+      id: `msg_${Date.now()}`,
+      senderId: "me",
+      senderName: "You",
+      senderAvatar: "/images/david_profile.png",
+      text: inputText.trim(),
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      isMe: true,
+    };
 
-  useEffect(() => {
-    if (selectedUser && isConnected) {
-      clearMessages();
-      fetchChats(selectedUser.id);
-    }
-  }, [selectedUser, isConnected, clearMessages, fetchChats]);
+    setContacts((prevContacts) =>
+      prevContacts.map((c) => {
+        if (c.id !== selectedContactId) return c;
+        return {
+          ...c,
+          messages: [...c.messages, newMsg],
+          lastMessage: newMsg.text,
+          lastMessageTime: newMsg.timestamp,
+        };
+      })
+    );
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    setInputText("");
 
-  const handleSend = () => {
-    if (!input.trim() || !selectedUser) return;
-    sendMessage(selectedUser.id, input.trim());
-    setInput("");
+    // Simulate instant auto-reply for demo friendliness
+    setTimeout(() => {
+      const replyMsg: DemoMessage = {
+        id: `msg_${Date.now() + 1}`,
+        senderId: activeContact.id,
+        senderName: activeContact.name,
+        senderAvatar: activeContact.avatar,
+        text: "Got it! Thanks for the update. Let me check that right away.",
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        isMe: false,
+      };
+
+      setContacts((prev) =>
+        prev.map((c) =>
+          c.id === selectedContactId
+            ? {
+                ...c,
+                messages: [...c.messages, replyMsg],
+                lastMessage: replyMsg.text,
+                lastMessageTime: replyMsg.timestamp,
+              }
+            : c
+        )
+      );
+      toast.info(`New message from ${activeContact.name}`);
+    }, 1200);
   };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
-  const isOnline = (userId: string) =>
-    onlineUsers.some((u) => u.id === userId);
-
-  const initials = (user: User) =>
-    (user.fullName ?? user.email)
-      .split(" ")
-      .map((p) => p[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
 
   return (
-    <div className="flex h-[calc(100vh-120px)] bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-      {/* Contact List */}
-      <div className="w-72 flex-shrink-0 border-r border-gray-100 flex flex-col">
-        {/* Header */}
-        <div className="p-4 border-b border-gray-100">
-          <div className="flex items-center justify-between mb-1">
-            <h2 className="font-semibold text-gray-900">Messages</h2>
-            <div className={`flex items-center gap-1 text-xs ${isConnected ? "text-emerald-600" : "text-red-500"}`}>
-              {isConnected ? <Wifi size={12} /> : <WifiOff size={12} />}
-              {isConnected ? "Live" : "Offline"}
+    <div className="flex flex-col gap-6 w-full pb-10">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-extrabold text-slate-800 tracking-tight">
+          Direct Messages & Conversations
+        </h1>
+        <p className="text-sm text-slate-500 mt-1">
+          Communicate in real-time with creators and clients.
+        </p>
+      </div>
+
+      {/* Main Chat Box */}
+      <div className="grid grid-cols-1 md:grid-cols-12 bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden min-h-[600px]">
+        {/* 1. Left Contact Sidebar (4 cols) */}
+        <div className="md:col-span-5 lg:col-span-4 border-r border-slate-100 flex flex-col">
+          {/* Search bar */}
+          <div className="p-4 border-b border-slate-100">
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search conversations..."
+                className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-100 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20"
+              />
             </div>
           </div>
-        </div>
 
-        {/* User List */}
-        <div className="flex-1 overflow-y-auto">
-          {isLoadingUsers ? (
-            <div className="flex items-center justify-center py-10">
-              <Loader2 size={20} className="animate-spin text-gray-400" />
-            </div>
-          ) : users.length === 0 ? (
-            <div className="p-4 text-center text-sm text-gray-400">No users found</div>
-          ) : (
-            users.map((user) => (
+          {/* Contact list */}
+          <div className="flex-1 overflow-y-auto divide-y divide-slate-50">
+            {contacts.map((contact) => (
               <button
-                key={user.id}
-                onClick={() => setSelectedUser(user)}
-                className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-50 text-left ${
-                  selectedUser?.id === user.id ? "bg-indigo-50 border-r-2 border-r-indigo-500" : ""
+                key={contact.id}
+                onClick={() => setSelectedContactId(contact.id)}
+                className={`w-full p-4 flex items-start gap-3.5 text-left transition-colors ${
+                  contact.id === selectedContactId
+                    ? "bg-indigo-50/60"
+                    : "hover:bg-slate-50/60"
                 }`}
               >
-                {/* Avatar */}
-                <div className="relative flex-shrink-0">
-                  <div className="w-10 h-10 rounded-xl overflow-hidden bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center">
-                    {user.profileImage ? (
-                      <Image src={user.profileImage} alt={user.fullName ?? "User"} fill className="object-cover" />
-                    ) : (
-                      <span className="text-sm font-bold text-white">{initials(user)}</span>
-                    )}
-                  </div>
-                  <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${isOnline(user.id) ? "bg-emerald-500" : "bg-gray-300"}`} />
+                <div className="relative">
+                  <Avatar className="h-11 w-11 border border-slate-100">
+                    <AvatarImage src={contact.avatar} alt={contact.name} />
+                    <AvatarFallback className="bg-indigo-100 text-indigo-700 font-bold text-xs">
+                      {contact.name.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  {contact.online && (
+                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
+                  )}
                 </div>
 
-                {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">
-                    {user.fullName ?? user.email}
-                  </p>
-                  <p className="text-xs text-gray-400 truncate">
-                    {isOnline(user.id) ? "Online" : "Offline"} · {user.role?.toLowerCase()}
+                  <div className="flex justify-between items-baseline mb-0.5">
+                    <h3 className="text-xs font-bold text-slate-800 truncate">
+                      {contact.name}
+                    </h3>
+                    <span className="text-[10px] font-semibold text-slate-400">
+                      {contact.lastMessageTime}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 truncate">
+                    {contact.lastMessage}
                   </p>
                 </div>
               </button>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* Chat Window */}
-      <div className="flex-1 flex flex-col">
-        {!selectedUser ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-3 text-gray-400">
-            <MessageSquare size={48} className="opacity-20" />
-            <p className="text-sm">Select a conversation to start messaging</p>
+            ))}
           </div>
-        ) : (
-          <>
-            {/* Chat Header */}
-            <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 bg-white">
-              <div className="relative">
-                <div className="w-9 h-9 rounded-xl overflow-hidden bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center">
-                  {selectedUser.profileImage ? (
-                    <Image src={selectedUser.profileImage} alt={selectedUser.fullName ?? "User"} fill className="object-cover" />
-                  ) : (
-                    <span className="text-sm font-bold text-white">{initials(selectedUser)}</span>
-                  )}
-                </div>
-                <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white ${isOnline(selectedUser.id) ? "bg-emerald-500" : "bg-gray-300"}`} />
-              </div>
+        </div>
+
+        {/* 2. Right Chat Window (8 cols) */}
+        <div className="md:col-span-7 lg:col-span-8 flex flex-col justify-between bg-slate-50/30">
+          {/* Active Contact Header */}
+          <div className="p-4 bg-white border-b border-slate-100 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10 border border-slate-100">
+                <AvatarImage src={activeContact.avatar} alt={activeContact.name} />
+                <AvatarFallback className="bg-indigo-600 text-white font-bold text-xs">
+                  {activeContact.name.slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
               <div>
-                <p className="text-sm font-semibold text-gray-900">
-                  {selectedUser.fullName ?? selectedUser.email}
-                </p>
-                <p className="text-xs text-gray-400">
-                  {isOnline(selectedUser.id) ? "Online now" : "Offline"}
+                <h3 className="font-bold text-sm text-slate-800">
+                  {activeContact.name}
+                </h3>
+                <p className="text-[11px] text-slate-400 flex items-center gap-1.5">
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      activeContact.online ? "bg-emerald-500" : "bg-slate-300"
+                    }`}
+                  />
+                  {activeContact.online ? "Online" : "Offline"} • {activeContact.role}
                 </p>
               </div>
             </div>
+          </div>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2 bg-gray-50">
-              {messages.length === 0 && (
-                <div className="flex flex-col items-center gap-2 py-10 text-gray-400">
-                  <MessageSquare size={32} className="opacity-20" />
-                  <p className="text-xs">No messages yet. Say hello!</p>
-                </div>
-              )}
-              {messages.map((msg: Chat) => {
-                const isMe = msg.senderId === currentUser?.id;
-                return (
+          {/* Messages Stream */}
+          <div className="flex-1 p-6 overflow-y-auto space-y-4 max-h-[440px]">
+            {activeContact.messages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`flex gap-3 items-end ${
+                  msg.isMe ? "justify-end" : "justify-start"
+                }`}
+              >
+                {!msg.isMe && (
+                  <Avatar className="h-7 w-7 mb-1">
+                    <AvatarImage src={msg.senderAvatar} alt={msg.senderName} />
+                    <AvatarFallback className="text-[10px] font-bold">
+                      {msg.senderName[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
+
+                <div
+                  className={`max-w-[70%] p-3.5 rounded-2xl text-xs leading-relaxed ${
+                    msg.isMe
+                      ? "bg-indigo-600 text-white rounded-br-none shadow-xs"
+                      : "bg-white text-slate-700 border border-slate-100 rounded-bl-none shadow-xs"
+                  }`}
+                >
+                  <p>{msg.text}</p>
                   <div
-                    key={msg.id}
-                    className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+                    className={`flex items-center justify-end gap-1 mt-1 text-[9px] ${
+                      msg.isMe ? "text-indigo-200" : "text-slate-400"
+                    }`}
                   >
-                    <div
-                      className={`max-w-xs lg:max-w-md px-3.5 py-2.5 rounded-2xl text-sm shadow-sm ${
-                        isMe
-                          ? "bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-br-sm"
-                          : "bg-white text-gray-800 border border-gray-100 rounded-bl-sm"
-                      }`}
-                    >
-                      {msg.imageUrl && (
-                        <div className="relative w-48 h-32 mb-2 rounded-lg overflow-hidden">
-                          <Image src={msg.imageUrl} alt="Shared image" fill className="object-cover" />
-                        </div>
-                      )}
-                      {msg.message && <p>{msg.message}</p>}
-                      <p className={`text-[10px] mt-1 ${isMe ? "text-indigo-200" : "text-gray-400"}`}>
-                        {formatDistanceToNow(msg.createdAt)}
-                      </p>
-                    </div>
+                    <span>{msg.timestamp}</span>
+                    {msg.isMe && <CheckCheck className="w-3 h-3" />}
                   </div>
-                );
-              })}
-              <div ref={messagesEndRef} />
-            </div>
-
-            {/* Input */}
-            <div className="p-4 border-t border-gray-100 bg-white">
-              <div className="flex items-center gap-2">
-                <button
-                  className="p-2.5 rounded-xl text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-                  title="Attach image"
-                >
-                  <ImageIcon size={18} />
-                </button>
-                <input
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder={`Message ${selectedUser.fullName ?? "user"}…`}
-                  className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200 text-sm transition-all"
-                />
-                <button
-                  onClick={handleSend}
-                  disabled={!input.trim() || !isConnected}
-                  className="p-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:shadow-indigo-200 hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Send size={18} />
-                </button>
+                </div>
               </div>
-            </div>
-          </>
-        )}
+            ))}
+          </div>
+
+          {/* Message Input Box */}
+          <div className="p-4 bg-white border-t border-slate-100">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSendMessage();
+              }}
+              className="flex items-center gap-2"
+            >
+              <button
+                type="button"
+                className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors"
+                title="Insert emoji"
+              >
+                <Smile className="w-5 h-5" />
+              </button>
+
+              <input
+                type="text"
+                placeholder="Type your message here... (Press Enter to send)"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                className="flex-1 py-2.5 px-4 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+              />
+
+              <Button
+                type="submit"
+                size="sm"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl px-4 h-10 gap-1.5 shadow-sm"
+              >
+                <span>Send</span>
+                <Send className="w-3.5 h-3.5" />
+              </Button>
+            </form>
+          </div>
+        </div>
       </div>
     </div>
   );
