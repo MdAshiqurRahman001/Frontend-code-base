@@ -1,6 +1,6 @@
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
-export type UserRole = "ADMIN" | "USER";
+export type UserRole = "ADMIN" | "USER" | "CREATOR" | "CLIENT";
 
 export type UserStatus =
   | "ACTIVE"
@@ -21,7 +21,8 @@ export type PaymentStatus =
   | "AUTHORIZED"
   | "PAID"
   | "CANCELLED"
-  | "FAILED";
+  | "FAILED"
+  | "COMPLETED";
 
 // ─── User ─────────────────────────────────────────────────────────────────────
 
@@ -118,7 +119,95 @@ export interface UserSubscription {
   subscriptionOffer?: SubscriptionOffer;
 }
 
+// ─── Projects & Milestones ────────────────────────────────────────────────────
+
+export interface Milestone {
+  id: number | string;
+  title: string;
+  description: string;
+  date: string;
+  status: "COMPLETED" | "IN PROGRESS" | "UPCOMING";
+}
+
+export interface Deliverable {
+  id: number | string;
+  title: string;
+  type: "JPG" | "MP4" | "PDF" | "ZIP";
+  sizeOrStatus: string;
+  url: string;
+}
+
+export interface Project {
+  id: number | string;
+  title: string;
+  client: string;
+  creator: string;
+  budget: string;
+  deadline: string;
+  status: "In Progress - Editing" | "Completed" | "Client Review" | "Cancelled";
+  progress: number;
+  milestones: Milestone[];
+  deliverables?: Deliverable[];
+}
+
+// ─── Packages / Pricing Plans ─────────────────────────────────────────────────
+
+export interface PackagePlan {
+  id: number | string;
+  name: string;
+  price: number;
+  billingPeriod: "monthly" | "yearly";
+  features: string[];
+  isPopular?: boolean;
+  createdAt?: string;
+}
+
+// ─── Financial Transactions & Payouts ─────────────────────────────────────────
+
+export interface PaymentTransaction {
+  id: string;
+  user: string;
+  email: string;
+  amount: string;
+  date: string;
+  status: "Completed" | "Pending" | "Failed";
+  plan: string;
+  method: string;
+}
+
+export interface PayoutRequest {
+  id: number | string;
+  name: string;
+  email: string;
+  amount: string;
+  bankName: string;
+  accountNumber: string;
+  requestDate: string;
+  status: "Pending" | "Approved" | "Rejected";
+}
+
 // ─── Chat / Messaging ─────────────────────────────────────────────────────────
+
+export interface ChatMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderAvatar: string;
+  text: string;
+  timestamp: string;
+  isMe: boolean;
+}
+
+export interface ChatContact {
+  id: string;
+  name: string;
+  role: string;
+  avatar: string;
+  online: boolean;
+  lastMessage: string;
+  lastMessageTime: string;
+  messages: ChatMessage[];
+}
 
 export interface Room {
   id: string;
@@ -138,6 +227,31 @@ export interface Chat {
   isRead: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+// ─── Analytics & Overview ─────────────────────────────────────────────────────
+
+export interface DashboardOverviewStats {
+  totalRevenue: string;
+  activeUsers: string;
+  activeCreators: string;
+  pendingApplications: string;
+  recentVolume: string;
+  escrowBalance: string;
+}
+
+export interface RevenuePoint {
+  month: string;
+  revenue: number;
+}
+
+export interface PlatformActivity {
+  id?: string;
+  name: string;
+  action: string;
+  time: string;
+  avatarBg?: string;
+  avatarColor?: string;
 }
 
 // ─── Friend / Follow ──────────────────────────────────────────────────────────

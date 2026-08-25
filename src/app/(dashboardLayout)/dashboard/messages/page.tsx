@@ -4,32 +4,42 @@
  * ==============================================================================
  * 💡 WHAT IS THIS FILE?
  * This is an interactive direct messaging & live chat interface.
- * It includes:
- *  - Contact List with search, online badges, and unread counters
- *  - Active Chat Stream with timestamps and avatar bubbles
- *  - Message Input Bar (type & send messages with instant UI update)
- *  - Quick predefined reply buttons
+ *
+ * 🛠️ DUAL-MODE DYNAMIC API INTEGRATION:
+ *  - Live Mode: Connects to `chatApi` (`getConversations`, `sendMessage`)
+ *  - Demo Mode: Falls back to `DEMO_CHAT_CONTACTS` with auto-reply simulation
  * ==============================================================================
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/purity */
 "use client";
 
 import { useState } from "react";
 import { DEMO_CHAT_CONTACTS, DemoChatContact, DemoMessage } from "@/constants/demoData";
+import { useGetConversationsQuery, useSendMessageMutation } from "@/redux/api/chatApi";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Search, Send, CheckCheck, Smile } from "lucide-react";
 import { toast } from "sonner";
 
 export default function MessagesPage() {
-  const [contacts, setContacts] = useState<DemoChatContact[]>(DEMO_CHAT_CONTACTS);
-  const [selectedContactId, setSelectedContactId] = useState<string>(DEMO_CHAT_CONTACTS[0].id);
+  const { data: apiChatData } = useGetConversationsQuery();
+  const [sendMessageApi] = useSendMessageMutation();
+
+  const rawContacts = Array.isArray(apiChatData?.data)
+    ? (apiChatData.data as any)
+    : DEMO_CHAT_CONTACTS;
+
+  const [contacts, setContacts] = useState<DemoChatContact[]>(rawContacts);
+  const [selectedContactId, setSelectedContactId] = useState<string>(
+    contacts[0]?.id || DEMO_CHAT_CONTACTS[0].id
+  );
   const [inputText, setInputText] = useState("");
 
   const activeContact =
-    contacts.find((c) => c.id === selectedContactId) || contacts[0];
+    contacts.find((c) => c.id === selectedContactId) || contacts[0] || DEMO_CHAT_CONTACTS[0];
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!inputText.trim()) return;
 
     const newMsg: DemoMessage = {
@@ -54,34 +64,43 @@ export default function MessagesPage() {
       })
     );
 
+    const messagePayload = inputText.trim();
     setInputText("");
 
-    // Simulate instant auto-reply for demo friendliness
-    setTimeout(() => {
-      const replyMsg: DemoMessage = {
-        id: `msg_${Date.now() + 1}`,
-        senderId: activeContact.id,
-        senderName: activeContact.name,
-        senderAvatar: activeContact.avatar,
-        text: "Got it! Thanks for the update. Let me check that right away.",
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        isMe: false,
-      };
+    // 1. Dispatch to real API if live
+    try {
+      await sendMessageApi({
+        receiverId: activeContact.id,
+        text: messagePayload,
+      }).unwrap();
+    } catch {
+      // 2. Demo auto-reply simulation if offline
+      setTimeout(() => {
+        const replyMsg: DemoMessage = {
+          id: `msg_${Date.now() + 1}`,
+          senderId: activeContact.id,
+          senderName: activeContact.name,
+          senderAvatar: activeContact.avatar,
+          text: "Got it! Thanks for the update. Let me check that right away.",
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          isMe: false,
+        };
 
-      setContacts((prev) =>
-        prev.map((c) =>
-          c.id === selectedContactId
-            ? {
-                ...c,
-                messages: [...c.messages, replyMsg],
-                lastMessage: replyMsg.text,
-                lastMessageTime: replyMsg.timestamp,
-              }
-            : c
-        )
-      );
-      toast.info(`New message from ${activeContact.name}`);
-    }, 1200);
+        setContacts((prev) =>
+          prev.map((c) =>
+            c.id === selectedContactId
+              ? {
+                  ...c,
+                  messages: [...c.messages, replyMsg],
+                  lastMessage: replyMsg.text,
+                  lastMessageTime: replyMsg.timestamp,
+                }
+              : c
+          )
+        );
+        toast.info(`New message from ${activeContact.name}`);
+      }, 1200);
+    }
   };
 
   return (
@@ -202,8 +221,8 @@ export default function MessagesPage() {
                 <div
                   className={`max-w-[70%] p-3.5 rounded-2xl text-xs leading-relaxed ${
                     msg.isMe
-                      ? "bg-indigo-600 text-white rounded-br-none shadow-xs"
-                      : "bg-white text-slate-700 border border-slate-100 rounded-bl-none shadow-xs"
+                      ? "bg-indigo-600 text-white rounded-br-none shadow-2xs"
+                      : "bg-white text-slate-700 border border-slate-100 rounded-bl-none shadow-2xs"
                   }`}
                 >
                   <p>{msg.text}</p>

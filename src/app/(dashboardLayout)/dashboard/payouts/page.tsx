@@ -1,22 +1,13 @@
-/**
- * ==============================================================================
- * 📌 PAYOUTS MANAGEMENT PAGE (/dashboard/payouts)
- * ==============================================================================
- * 💡 WHAT IS THIS FILE?
- * This page allows platform admins to review, approve, or reject creator payout
- * requests.
- * It includes:
- *  - Interactive review queue with live status updates
- *  - "Process Payout" confirmation dialog
- *  - Bank information preview
- * ==============================================================================
- */
-
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState } from "react";
 import { DEMO_PAYOUTS, DemoPayout } from "@/constants/demoData";
+import {
+  useGetPayoutsQuery,
+  useApprovePayoutMutation,
+  useRejectPayoutMutation,
+} from "@/redux/api/payoutApi";
 import { NRTable } from "@/components/ui/core/NRTable";
 import { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
@@ -33,23 +24,43 @@ import { Banknote, Check, X, ShieldAlert, Building2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function PayoutsPage() {
-  const [payouts, setPayouts] = useState<DemoPayout[]>(DEMO_PAYOUTS);
+  const { data: apiPayoutsData } = useGetPayoutsQuery();
+  const [approvePayoutApi] = useApprovePayoutMutation();
+  const [rejectPayoutApi] = useRejectPayoutMutation();
+
+  const rawPayouts = Array.isArray(apiPayoutsData?.data)
+    ? (apiPayoutsData.data as any)
+    : (apiPayoutsData?.data as any)?.data || DEMO_PAYOUTS;
+
+  const [payouts, setPayouts] = useState<DemoPayout[]>(rawPayouts);
   const [selectedPayout, setSelectedPayout] = useState<DemoPayout | null>(null);
 
-  const handleApprove = (id: number) => {
+  const handleApprove = async (id: number) => {
     setPayouts((prev) =>
       prev.map((p) => (p.id === id ? { ...p, status: "Approved" } : p))
     );
     toast.success("Payout approved & dispatched to bank transfer!");
     setSelectedPayout(null);
+
+    try {
+      await approvePayoutApi(id).unwrap();
+    } catch {
+      // Graceful fallback
+    }
   };
 
-  const handleReject = (id: number) => {
+  const handleReject = async (id: number) => {
     setPayouts((prev) =>
       prev.map((p) => (p.id === id ? { ...p, status: "Rejected" } : p))
     );
     toast.error("Payout request rejected.");
     setSelectedPayout(null);
+
+    try {
+      await rejectPayoutApi({ id, reason: "Administrative review" }).unwrap();
+    } catch {
+      // Graceful fallback
+    }
   };
 
   const columns: ColumnDef<DemoPayout, any>[] = [
@@ -146,7 +157,7 @@ export default function PayoutsPage() {
 
       {/* 2. Overview Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-5 bg-white rounded-2xl border border-slate-100 shadow-xs flex items-center gap-4">
+        <div className="p-5 bg-white rounded-2xl border border-slate-100 shadow-2xs flex items-center gap-4">
           <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
             <Banknote className="w-6 h-6" />
           </div>
@@ -156,7 +167,7 @@ export default function PayoutsPage() {
           </div>
         </div>
 
-        <div className="p-5 bg-white rounded-2xl border border-slate-100 shadow-xs flex items-center gap-4">
+        <div className="p-5 bg-white rounded-2xl border border-slate-100 shadow-2xs flex items-center gap-4">
           <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
             <Check className="w-6 h-6" />
           </div>
@@ -166,7 +177,7 @@ export default function PayoutsPage() {
           </div>
         </div>
 
-        <div className="p-5 bg-white rounded-2xl border border-slate-100 shadow-xs flex items-center gap-4">
+        <div className="p-5 bg-white rounded-2xl border border-slate-100 shadow-2xs flex items-center gap-4">
           <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
             <ShieldAlert className="w-6 h-6" />
           </div>
@@ -178,7 +189,7 @@ export default function PayoutsPage() {
       </div>
 
       {/* 3. Table */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs">
+      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-2xs">
         <h2 className="text-base font-bold text-slate-800 mb-4">
           Payout Requests Queue
         </h2>

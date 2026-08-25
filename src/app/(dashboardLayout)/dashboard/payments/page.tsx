@@ -1,21 +1,9 @@
-/**
- * ==============================================================================
- * 📌 PAYMENTS & TRANSACTIONS PAGE (/dashboard/payments)
- * ==============================================================================
- * 💡 WHAT IS THIS FILE?
- * This page displays incoming transactions and payment history.
- * It includes:
- *  - Metric cards for Total Revenue, Escrow Deposits, and Refund Rate
- *  - Interactive Transactions table with `@tanstack/react-table`
- *  - Receipt / Invoice View modal with download simulation
- * ==============================================================================
- */
-
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState } from "react";
 import { DEMO_TRANSACTIONS, DemoTransaction } from "@/constants/demoData";
+import { useGetTransactionsQuery } from "@/redux/api/paymentApi";
 import { NRTable } from "@/components/ui/core/NRTable";
 import { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
@@ -32,7 +20,13 @@ import { DollarSign, ArrowDownLeft, Eye, ReceiptText } from "lucide-react";
 import { toast } from "sonner";
 
 export default function PaymentsPage() {
-  const [transactions] = useState<DemoTransaction[]>(DEMO_TRANSACTIONS);
+  const { data: apiTxnsData } = useGetTransactionsQuery();
+
+  const rawTxns = Array.isArray(apiTxnsData?.data)
+    ? (apiTxnsData.data as any)
+    : (apiTxnsData?.data as any)?.data || DEMO_TRANSACTIONS;
+
+  const [transactions] = useState<DemoTransaction[]>(rawTxns);
   const [selectedTxn, setSelectedTxn] = useState<DemoTransaction | null>(null);
 
   const columns: ColumnDef<DemoTransaction, any>[] = [
@@ -132,7 +126,7 @@ export default function PaymentsPage() {
 
       {/* 2. Metrics Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-5 bg-white rounded-2xl border border-slate-100 shadow-xs flex items-center gap-4">
+        <div className="p-5 bg-white rounded-2xl border border-slate-100 shadow-2xs flex items-center gap-4">
           <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
             <DollarSign className="w-6 h-6" />
           </div>
@@ -142,7 +136,7 @@ export default function PaymentsPage() {
           </div>
         </div>
 
-        <div className="p-5 bg-white rounded-2xl border border-slate-100 shadow-xs flex items-center gap-4">
+        <div className="p-5 bg-white rounded-2xl border border-slate-100 shadow-2xs flex items-center gap-4">
           <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
             <ArrowDownLeft className="w-6 h-6" />
           </div>
@@ -152,7 +146,7 @@ export default function PaymentsPage() {
           </div>
         </div>
 
-        <div className="p-5 bg-white rounded-2xl border border-slate-100 shadow-xs flex items-center gap-4">
+        <div className="p-5 bg-white rounded-2xl border border-slate-100 shadow-2xs flex items-center gap-4">
           <div className="p-3 bg-purple-50 text-purple-600 rounded-xl">
             <ReceiptText className="w-6 h-6" />
           </div>
@@ -164,7 +158,7 @@ export default function PaymentsPage() {
       </div>
 
       {/* 3. TanStack Data Table */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs">
+      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-2xs">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-base font-bold text-slate-800">Recent Transactions Log</h2>
           <Button

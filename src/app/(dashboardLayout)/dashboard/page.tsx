@@ -3,20 +3,15 @@
  * 📌 DASHBOARD OVERVIEW PAGE (/dashboard)
  * ==============================================================================
  * 💡 WHAT IS THIS FILE?
- * This is the main dashboard landing page. It displays:
- *  - High-level metric summary cards (Revenue, Active Users, Projects, Payouts)
- *  - Interactive Revenue Chart with timeframe switches (Monthly / Yearly)
- *  - Live Recent User Activity feed
- *  - Pending Payouts review queue with one-click approval actions
- *  - Quick Action shortcuts to all major sections
+ * This is the main dashboard landing page.
  *
- * 🛠️ HOW TO CUSTOMIZE:
- * The data shown below uses `DEMO_METRICS`, `dummyRevenue`, and `dummyPayouts`
- * as safe fallbacks. When your backend API is ready, simply pass your API query
- * data directly into these components!
+ * 🛠️ DUAL-MODE DYNAMIC API INTEGRATION:
+ *  - Live Mode: Fetches metrics, revenue series, and live feed via `analyticsApi`
+ *  - Demo Mode: Automatically falls back to curated mock datasets when backend is offline
  * ==============================================================================
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState } from "react";
@@ -27,6 +22,12 @@ import PendingPayouts from "@/components/module/Dashboard/DashbordOverview/Pendi
 import { useAppSelector } from "@/redux/hooks";
 import { selectCurrentUser } from "@/redux/features/auth/authSlice";
 import { useGetMyProfileQuery } from "@/redux/api/authApi";
+import {
+  useGetDashboardOverviewQuery,
+  useGetRevenueAnalyticsQuery,
+  useGetPlatformFeedQuery,
+} from "@/redux/api/analyticsApi";
+import { useGetPayoutsQuery } from "@/redux/api/payoutApi";
 import {
   FolderKanban,
   Package,
@@ -39,15 +40,15 @@ import {
 import Link from "next/link";
 import { toast } from "sonner";
 
-// Demo stats and activities
-const dummyMetrics: MetricItem[] = [
+// Default Demo Fallbacks
+const fallbackMetrics: MetricItem[] = [
   { title: "Total Revenue", value: "$124,580", type: "revenue" },
   { title: "Active Users", value: "8,640", type: "users" },
   { title: "Active Creators", value: "640", type: "creators" },
   { title: "Pending Applications", value: "24", type: "applications" },
 ];
 
-const dummyRevenue = [
+const fallbackRevenue = [
   { month: "Jan", revenue: 45000 },
   { month: "Feb", revenue: 52000 },
   { month: "Mar", revenue: 48000 },
@@ -58,7 +59,7 @@ const dummyRevenue = [
   { month: "Aug", revenue: 95000 },
 ];
 
-const dummyActivities = [
+const fallbackActivities = [
   {
     name: "Elena Rostova",
     action: "Submitted milestone 3 for Brand Identity",
@@ -89,7 +90,7 @@ const dummyActivities = [
   },
 ];
 
-const initialPayouts = [
+const fallbackPayouts = [
   {
     id: "1",
     creator: {
@@ -133,10 +134,47 @@ export default function DashboardPage() {
   const { data: profileData } = useGetMyProfileQuery(undefined);
   const profile = profileData?.data ?? currentUser;
 
-  const [payoutsList] = useState(initialPayouts);
+  // RTK Query Dynamic Data Hooks
+  const { data: overviewData } = useGetDashboardOverviewQuery();
+  const { data: revenueData } = useGetRevenueAnalyticsQuery();
+  const { data: feedData } = useGetPlatformFeedQuery();
+  const { data: payoutsData } = useGetPayoutsQuery();
+
+  // Unified dynamic metrics with fallback
+  const displayMetrics: MetricItem[] = overviewData?.data
+    ? [
+        { title: "Total Revenue", value: overviewData.data.totalRevenue, type: "revenue" },
+        { title: "Active Users", value: overviewData.data.activeUsers, type: "users" },
+        { title: "Active Creators", value: overviewData.data.activeCreators, type: "creators" },
+        { title: "Pending Applications", value: overviewData.data.pendingApplications, type: "applications" },
+      ]
+    : fallbackMetrics;
+
+  const displayRevenue = revenueData?.data?.length ? revenueData.data : fallbackRevenue;
+  const displayActivities = feedData?.data?.length ? feedData.data : fallbackActivities;
+
+  // Normalize payouts data for table
+  const rawPayouts = Array.isArray(payoutsData?.data)
+    ? payoutsData.data
+    : (payoutsData?.data as any)?.data || [];
+
+  const displayPayouts = rawPayouts.length > 0
+    ? rawPayouts.slice(0, 3).map((p: any) => ({
+        id: String(p.id),
+        creator: {
+          name: p.name || "Creator",
+          role: p.bankName || "Creator Account",
+          initials: (p.name || "CR").slice(0, 2).toUpperCase(),
+          avatarBg: "bg-indigo-100",
+          avatarText: "text-indigo-600",
+        },
+        amount: p.amount,
+        status: p.status === "Pending" ? "AWAITING REVIEW" : p.status,
+      }))
+    : fallbackPayouts;
 
   return (
-    <div className="flex flex-col gap-8 w-full">
+    <div className="flex flex-col gap-8 w-full pb-10">
       {/* 1. Welcome Banner */}
       <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-indigo-600 via-indigo-700 to-violet-800 p-8 text-white shadow-xl shadow-indigo-500/10">
         <div
@@ -150,7 +188,7 @@ export default function DashboardPage() {
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-xs font-semibold text-indigo-100 mb-3 border border-white/10">
               <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              <span>Interactive Platform Dashboard</span>
+              <span>Production-Ready Starter Dashboard</span>
             </div>
             <h1 className="text-3xl font-extrabold tracking-tight">
               Welcome back, {profile?.fullName || "Admin"}! 👋
@@ -211,16 +249,16 @@ export default function DashboardPage() {
           <h2 className="text-base font-bold text-slate-800">Platform Analytics</h2>
           <span className="text-xs font-semibold text-slate-400">Live 30-Day Metrics</span>
         </div>
-        <MetricCards metrics={dummyMetrics} />
+        <MetricCards metrics={displayMetrics} />
       </div>
 
       {/* 4. Charts and Live Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
         <div className="lg:col-span-2 flex w-full">
-          <RevenueChart data={dummyRevenue} />
+          <RevenueChart data={displayRevenue} />
         </div>
         <div className="lg:col-span-1 flex w-full">
-          <UserActivity activities={dummyActivities} />
+          <UserActivity activities={displayActivities} />
         </div>
       </div>
 
@@ -229,13 +267,13 @@ export default function DashboardPage() {
         <div className="flex justify-between items-center">
           <h2 className="text-base font-bold text-slate-800">Pending Creator Payouts</h2>
           <button
-            onClick={() => toast.info("All pending payouts are up to date.")}
+            onClick={() => toast.info("Payouts queue is synchronized.")}
             className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
           >
             Refresh Queue
           </button>
         </div>
-        <PendingPayouts data={payoutsList} />
+        <PendingPayouts data={displayPayouts} />
       </div>
     </div>
   );

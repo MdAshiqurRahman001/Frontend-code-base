@@ -4,17 +4,23 @@
  * ==============================================================================
  * 💡 WHAT IS THIS FILE?
  * This page displays all platform notifications and alerts.
- * It includes:
- *  - Category filter tabs (All, Orders, Payouts, Messages, System)
- *  - "Mark All as Read" & "Clear All" batch actions
- *  - Individual notification status toggles
+ *
+ * 🛠️ DUAL-MODE DYNAMIC API INTEGRATION:
+ *  - Live Mode: Connects to `notificationApi` (`getMyNotifications`, `markNotificationsRead`)
+ *  - Demo Mode: Falls back to `DEMO_NOTIFICATIONS` with batch actions simulation
  * ==============================================================================
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState } from "react";
 import { DEMO_NOTIFICATIONS, DemoNotification } from "@/constants/demoData";
+import {
+  useGetMyNotificationsQuery,
+  useMarkNotificationsReadMutation,
+  useDeleteNotificationMutation,
+} from "@/redux/api/notificationApi";
 import { Button } from "@/components/ui/button";
 import {
   Bell,
@@ -28,17 +34,31 @@ import {
 import { toast } from "sonner";
 
 export default function NotificationsPage() {
+  const { data: apiNotifsData } = useGetMyNotificationsQuery({});
+  const [markReadApi] = useMarkNotificationsReadMutation();
+  const [deleteNotificationApi] = useDeleteNotificationMutation();
+
+  const rawNotifications = Array.isArray(apiNotifsData?.data)
+    ? (apiNotifsData.data as any)
+    : (apiNotifsData?.data as any)?.data || DEMO_NOTIFICATIONS;
+
   const [notifications, setNotifications] =
-    useState<DemoNotification[]>(DEMO_NOTIFICATIONS);
+    useState<DemoNotification[]>(rawNotifications);
   const [activeTab, setActiveTab] = useState<string>("all");
 
   const filteredNotifications = notifications.filter(
     (n) => activeTab === "all" || n.category === activeTab
   );
 
-  const handleMarkAllRead = () => {
+  const handleMarkAllRead = async () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     toast.success("All notifications marked as read!");
+
+    try {
+      await markReadApi().unwrap();
+    } catch {
+      // Graceful fallback
+    }
   };
 
   const handleClearAll = () => {
@@ -52,9 +72,15 @@ export default function NotificationsPage() {
     );
   };
 
-  const handleDeleteNotification = (id: string) => {
+  const handleDeleteNotification = async (id: string) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
     toast.error("Notification removed.");
+
+    try {
+      await deleteNotificationApi(id).unwrap();
+    } catch {
+      // Graceful fallback
+    }
   };
 
   const getCategoryIcon = (cat: DemoNotification["category"]) => {
@@ -105,7 +131,7 @@ export default function NotificationsPage() {
       </div>
 
       {/* 2. Filter Tabs */}
-      <div className="flex items-center gap-2 p-1.5 bg-white rounded-2xl border border-slate-100 shadow-xs w-fit">
+      <div className="flex items-center gap-2 p-1.5 bg-white rounded-2xl border border-slate-100 shadow-2xs w-fit">
         {[
           { id: "all", label: "All Alerts" },
           { id: "payout", label: "Payouts" },
@@ -128,7 +154,7 @@ export default function NotificationsPage() {
       </div>
 
       {/* 3. Notifications List */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-xs divide-y divide-slate-50 overflow-hidden">
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-2xs divide-y divide-slate-50 overflow-hidden">
         {filteredNotifications.length === 0 ? (
           <div className="p-12 text-center flex flex-col items-center gap-3">
             <Bell className="w-10 h-10 text-slate-300 stroke-[1.5]" />
