@@ -121,6 +121,18 @@ export const authApi = baseApi.injectEndpoints({
       }),
     }),
 
+    // POST /auth/refresh-token
+    refreshToken: builder.mutation<
+      ApiResponse<{ token?: string; accessToken?: string; refreshToken?: string }>,
+      { refreshToken?: string } | void
+    >({
+      query: (body) => ({
+        url: "/auth/refresh-token",
+        method: "POST",
+        body: body || {},
+      }),
+    }),
+
     updateUser: builder.mutation<any, any>({
       query: (data) => ({
         url: "/users/update-profile",
@@ -139,6 +151,7 @@ export const {
   useRegisterMutation,
   useSocialAuthMutation,
   useLogoutUserMutation,
+  useRefreshTokenMutation,
   useGetMyProfileQuery,
   useGetMeQuery,
   useChangePasswordMutation,

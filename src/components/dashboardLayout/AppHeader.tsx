@@ -89,6 +89,7 @@ export const AppHeader = () => {
     }
     dispatch(logout());
     Cookies.remove("auth-token");
+    Cookies.remove("refresh-token");
     toast.success("Signed out successfully.");
     router.push("/auth/signin");
   };

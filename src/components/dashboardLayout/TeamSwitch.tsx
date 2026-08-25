@@ -43,6 +43,7 @@ export function TeamSwitcher({
   const handleLogout = () => {
     dispatch(logout());
     Cookies.remove("auth-token");
+    Cookies.remove("refresh-token");
     toast.success("Logged out successfully!");
     setTimeout(() => {
       router.push("/auth/signin");

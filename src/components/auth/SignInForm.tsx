@@ -45,7 +45,8 @@ export default function SignInForm() {
         password: data.password,
       }).unwrap()) as any;
 
-      const { token, userId, role, email, emailVerified } = res?.data || {};
+      const { token, accessToken, refreshToken, userId, role, email, emailVerified } = res?.data || {};
+      const authToken = accessToken || token;
 
       // If email not verified, redirect to OTP page
       if (!emailVerified) {
@@ -55,18 +56,25 @@ export default function SignInForm() {
       }
 
       // Store token in cookie for middleware access
-      Cookies.set("auth-token", token, {
-        expires: data.remember ? 60 : undefined,
-        sameSite: "lax",
-      });
+      if (authToken) {
+        Cookies.set("auth-token", authToken, {
+          expires: data.remember ? 60 : undefined,
+          sameSite: "lax",
+        });
+      }
+
+      if (refreshToken) {
+        Cookies.set("refresh-token", refreshToken, {
+          expires: data.remember ? 90 : undefined,
+          sameSite: "lax",
+        });
+      }
 
       // Fetch full profile then store in Redux
-      dispatch(setToken(token));
-
-      // Build minimal user object from login response
       dispatch(
         setUser({
-          token,
+          token: authToken,
+          refreshToken: refreshToken || null,
           user: {
             id: userId,
             email,

@@ -22,6 +22,8 @@ import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { useRouter } from "next/navigation";
 import { removeCookie } from "@/utils/cookies";
 
+import Cookies from "js-cookie";
+
 export function NavUser() {
   const { isMobile } = useSidebar();
   const currentUser = useAppSelector(selectCurrentUser);
@@ -34,6 +36,8 @@ export function NavUser() {
     } catch (e) {
       console.error(e);
     }
+    Cookies.remove("auth-token");
+    Cookies.remove("refresh-token");
     dispatch(logout());
     router.push("/auth/signin");
   };

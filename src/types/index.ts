@@ -74,6 +74,14 @@ export interface LoginResponse {
   emailVerified?: boolean;
   role: UserRole;
   token: string;
+  accessToken?: string;
+  refreshToken?: string;
+}
+
+export interface RefreshTokenResponse {
+  token?: string;
+  accessToken?: string;
+  refreshToken?: string;
 }
 
 export interface RegisterResponse {
@@ -84,6 +92,8 @@ export interface RegisterResponse {
 export interface OtpVerifyResponse {
   message: string;
   Token: string;
+  token?: string;
+  refreshToken?: string;
 }
 
 // ─── Notifications ────────────────────────────────────────────────────────────
