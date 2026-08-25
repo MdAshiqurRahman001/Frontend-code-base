@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -39,12 +40,12 @@ export default function SignInForm() {
 
   const onSubmit = async (data: SignInFormData) => {
     try {
-      const res = await loginUser({
+      const res = (await loginUser({
         email: data.email,
         password: data.password,
-      }).unwrap();
+      }).unwrap()) as any;
 
-      const { token, userId, role, email, emailVerified } = res.data;
+      const { token, userId, role, email, emailVerified } = res?.data || {};
 
       // If email not verified, redirect to OTP page
       if (!emailVerified) {

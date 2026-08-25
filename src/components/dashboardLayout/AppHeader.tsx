@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
@@ -37,7 +38,7 @@ const AppHeader = () => {
 
   const handleLogout = async () => {
     try {
-      await logoutUser().unwrap();
+      await logoutUser(undefined as any).unwrap();
     } catch {
       // Continue with client-side logout even if server call fails
     }

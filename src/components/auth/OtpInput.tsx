@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useRef, useState, KeyboardEvent, ClipboardEvent, useEffect } from "react";
@@ -71,11 +72,13 @@ export default function OtpInput() {
     }
 
     try {
-      const res = await verifyOtp({ email, otp: Number(code) }).unwrap();
-      const token = res.data.Token;
+      const res = (await verifyOtp({ email, otp: Number(code) }).unwrap()) as any;
+      const token = res?.data?.Token || res?.data?.token;
 
-      Cookies.set("auth-token", token, { expires: 60, sameSite: "lax" });
-      dispatch(setToken(token));
+      if (token) {
+        Cookies.set("auth-token", token, { expires: 60, sameSite: "lax" });
+        dispatch(setToken(token));
+      }
 
       toast.success("Email verified! Welcome aboard 🎉");
       router.push("/dashboard");

@@ -12,7 +12,7 @@ import { formatDate } from "@/components/dashboard/dateUtils";
 
 export default function DashboardPage() {
   const currentUser = useAppSelector(selectCurrentUser);
-  const { data: profileData } = useGetMyProfileQuery();
+  const { data: profileData } = useGetMyProfileQuery(undefined);
   const { data: unreadData } = useGetUnreadNotificationsQuery();
   const { data: subscriptionData } = useGetMyUserSubscriptionQuery();
 

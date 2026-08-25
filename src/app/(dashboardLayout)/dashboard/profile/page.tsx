@@ -25,7 +25,7 @@ interface PasswordFormData {
 export default function ProfilePage() {
   const dispatch = useAppDispatch();
   const currentUser = useAppSelector(selectCurrentUser);
-  const { data, refetch } = useGetMyProfileQuery();
+  const { data, refetch } = useGetMyProfileQuery(undefined);
   const [updateProfile, { isLoading: isUpdating }] = useUpdateProfileMutation();
   const [uploadPhoto, { isLoading: isUploading }] = useUploadPhotoMutation();
   const [changePassword, { isLoading: isChanging }] = useChangePasswordMutation();
@@ -92,7 +92,7 @@ export default function ProfilePage() {
   };
 
   const initials = profile?.fullName
-    ? profile.fullName.split(" ").map((p) => p[0]).join("").toUpperCase().slice(0, 2)
+    ? profile.fullName.split(" ").map((p: string) => p[0]).join("").toUpperCase().slice(0, 2)
     : profile?.email?.[0]?.toUpperCase() ?? "U";
 
   return (

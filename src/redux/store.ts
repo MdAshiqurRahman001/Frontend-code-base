@@ -13,9 +13,18 @@ import persistReducer from "redux-persist/es/persistReducer";
 import storage from "redux-persist/lib/storage";
 import rootReducer from "./features/rootReducer";
 
+const noopStorage = {
+  getItem: () => Promise.resolve(null),
+  setItem: () => Promise.resolve(),
+  removeItem: () => Promise.resolve(),
+};
+
 const persistConfig = {
   key: "root",
-  storage,
+  storage:
+    typeof window !== "undefined" && window.localStorage
+      ? storage
+      : noopStorage,
   whitelist: ["auth"],
 };
 
