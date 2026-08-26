@@ -7,7 +7,6 @@
  *  - The dynamic Sidebar on the left (`<AppSidebar />`)
  *  - The Top Header on the top (`<AppHeader />`)
  *  - The main page content (`{children}`)
- *  - Global toast notifications (`<Toaster />`)
  * ==============================================================================
  */
 
@@ -15,7 +14,6 @@ import AppHeader from "@/components/dashboardLayout/AppHeader";
 import { AppSidebar } from "@/components/shared/app-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import React, { ReactNode } from "react";
-import { Toaster } from "sonner";
 
 const DashboardLayout = ({ children }: { children: ReactNode }) => {
   return (
@@ -27,7 +25,6 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
           <div className="flex-1 overflow-y-auto">
             <div className="flex flex-col gap-6 p-6 max-w-7xl mx-auto w-full">
               {children}
-              <Toaster richColors position="top-center" />
             </div>
           </div>
         </SidebarInset>

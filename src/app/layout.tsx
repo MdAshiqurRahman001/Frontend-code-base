@@ -32,7 +32,7 @@ export default function RootLayout({
         <Suspense fallback={<Loading />}>
           <ReduxProvider>
             {children}
-            <Toaster richColors position="top-right" />
+            <Toaster richColors position="top-center" />
           </ReduxProvider>
         </Suspense>
       </body>
