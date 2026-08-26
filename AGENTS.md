@@ -1,5 +1,10 @@
 # Project Development Guidelines
 
+## Workspace Isolation & Active Context
+- **Never touch or modify files in any other workspace/project** unless explicitly commanded by the user.
+- **Strictly operate only in the active workspace/project** where the user is giving commands and editing files.
+- Always verify the active workspace root path before creating, editing, or deleting files.
+
 ## Project Structure & Architecture Standards
 
 Always adhere strictly to the following directory and component architecture:
