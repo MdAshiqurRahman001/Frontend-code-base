@@ -1,26 +1,7 @@
-import React, { Suspense } from "react";
-import type { Metadata } from "next";
-import OtpInput from "@/components/auth/OtpInput";
+import VerifyOtpModule from "@/components/module/Auth/VerifyOtp";
 
-export const metadata: Metadata = {
-  title: "Verify OTP | App",
-  description: "Enter the OTP sent to your email to verify your account.",
+const VerifyOtpPage = () => {
+  return <VerifyOtpModule />;
 };
 
-export default function VerifyOtpPage() {
-  return (
-    <div>
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-1">
-          Verify your email
-        </h2>
-        <p className="text-gray-500 text-sm">
-          Enter the one-time code we sent to your email address.
-        </p>
-      </div>
-      <Suspense>
-        <OtpInput />
-      </Suspense>
-    </div>
-  );
-}
+export default VerifyOtpPage;
